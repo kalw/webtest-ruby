@@ -1,0 +1,18 @@
+%p
+.span12.hero-unit
+	%form.span12.form-horizontal{:action => "/test/", :method => "GET"}
+		.row-fluid
+			.span3
+				%h1 wptrb
+			.span9
+				%p "Inspect websites and harden them..."
+				.input-append
+					%input.span10{:type => "text",:placeholder => "url",:name => "url" }
+					%button.btn.btn-primary{:type => "submit"}
+						%i.icon-search.icon-white
+						GO
+			%button.btn{:"data-toggle" => "collapse", :"data-target" => "#demo"}
+				coin
+			#demo.collapse toto yoyo
+				
+						

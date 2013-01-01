@@ -1,0 +1,9 @@
+:javascript
+	(function() {
+	    var har = document.createElement("script");
+	    har.src = "/har.js";
+	    har.setAttribute("id", "har");
+	    har.setAttribute("async", "true");
+	    document.documentElement.firstChild.appendChild(har);
+	})();
+.har{:id =>"har",:"data-har" => "/results/#{name}.har"}

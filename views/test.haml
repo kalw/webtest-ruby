@@ -1,0 +1,6 @@
+%ul
+	- test.simulate_display
+	- test.proxy("/Users/despresr/Downloads/browsermob-proxy-2.0-beta-6/bin/browsermob-proxy")
+	- test.test_url("firefox","watir")
+	- test.inspect.gsub(/[<>]/,"").split(",").each do |info|
+		%li  #{info}

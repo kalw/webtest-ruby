@@ -1,0 +1,1 @@
+#%x(java -jar   /usr/local/share/webpagetest/lib/dt2har/target/dt2har-1.1-SNAPSHOT-jar-with-dependencies.jar   --devtools ./devtools_events.json   --har   ./#{name}.har   --har_page_id   page_1_0 )
