@@ -6,4 +6,17 @@
 	    har.setAttribute("async", "true");
 	    document.documentElement.firstChild.appendChild(har);
 	})();
-.har{:id =>"har",:"data-har" => "/results/#{name}.har", :validate => "false",:stats => "true",:height => "1200"}
+= if "#{yslow}" == "yes" 
+	.raw-fluid
+		.span3
+			%table.table.table-condensed
+				- file_name = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}.har"
+				- yslow = %x(yslow -i stats -f plain -d #{file_name})
+				- pp "#{yslow}.inspect"
+				%thead 
+					%h2 YSLOW
+				- yslow.inspect.gsub('"',"").split(/\\n/).each do |info|
+					%tr  
+						%td #{info}
+	- puts "#{yslow} #{file_name}"
+.har{:id =>"har",:"data-har" => "/results/#{name}.har", :validate => "false",:stats => "true",:height => "300"}

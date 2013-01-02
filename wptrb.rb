@@ -78,9 +78,11 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
  
   def initialize(site_url)
     @results_path = File.expand_path(File.dirname(__FILE__)) + "/public/results/"
-    puts "#{results_path}"
+    puts results_path
     @url = site_url
     @name = "#{site_url.hash}"
+    @name = "#{name}".gsub(/-/,"")
+    puts name
     @webdriver_type = "watir" # string format , i.e. : watir || selenium
     @browser_type = "chrome" # string format , i.e. : chrome || firefox
     @har_type = "proxy" # string format , i.e. : proxy || internal
@@ -249,10 +251,10 @@ if opts[:www]
     register Sinatra::Reloader
     #enable :inline_templates
     #set :session_secret, ENV["SESSION_KEY"] || 'too secret'
-    enable :sessions
+    #enable :sessions
     
-#    use Rack::Session::Pool, :expire_after => 2592000,:key => 'my_app_key',
-#                            :path => '/',:secret => 'coincoin'
+    #use Rack::Session::Pool, :expire_after => 2592000,:key => 'my_app_key',
+    #  :path => '/',:secret => 'coincoin'
     helpers do
       #include Rack::Utils
     end
@@ -269,7 +271,7 @@ if opts[:www]
       erb:har
     end
     get '/display/' do
-      haml:display,:locals => {:name => params[:name]}
+      haml:display,:locals => {:name => params[:name],:host => request.env["SERVER_NAME"],:port => request.port,:yslow => params[:yslow] }
     end
    end
    WptrbWww.run!
