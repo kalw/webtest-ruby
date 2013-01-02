@@ -206,7 +206,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
       if !@headless.nil?
       	#@headless.take_screenshot("#{results_path}#{name}.x11.png")
       end
-      browser.screenshot.save("#{results_path}#{name}.webdriver.png")
+      browser.save_screenshot("#{results_path}#{name}.webdriver.png")
     end
 
     # browser_type == "firefox" && webdriver_type == "selenium"
@@ -217,7 +217,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
       if !@headless.nil?
       	#@headless.take_screenshot("#{results_path}#{name}.x11.png")
       end
-      browser.screenshot.save("#{results_path}#{name}.webdriver.png")
+      browser.save_screenshot("#{results_path}#{name}.webdriver.png")
     end
 
     if @har_type == "proxy" 
