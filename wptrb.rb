@@ -100,7 +100,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
     @firefox_settings["extensions.firebug.net.enableSites"]   = true
     
     @firefox_settings['extensions.firebug.netexport.autoExportToFile'] = true
-    @firefox_settings['extensions.firebug.netexport.defaultLogDir'] = results_path
+    @firefox_settings['extensions.firebug.netexport.defaultLogDir'] = "#{results_path}"
     @firefox_settings["extensions.firebug.netexport.showPreview"] = false
     @firefox_settings["extensions.firebug.netexport.alwaysEnableAutoExport"] = true
   end
