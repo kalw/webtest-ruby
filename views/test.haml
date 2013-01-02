@@ -1,11 +1,11 @@
+.progress.progress-striped.active
+	.bar{:style => "width: 40%;"}
 - test.simulate_display
 - test.proxy("lib/browsermob-proxy/2.0-beta-6/bin/browsermob-proxy")
-- test.test_url("firefox","selenium")
+- test.test_url("firefox","watir")
 = if "#{debug}" == "yes" 
 	%ul
 		- test.inspect.gsub(/[<>]/,"").split(",").each do |info|
 			%li  #{info}
-.progress.progress-striped.active
-	.bar{:style => "width: 40%;"}
 :javascript
 	window.location="/display/?name=#{test.name}"
