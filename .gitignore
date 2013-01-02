@@ -1,4 +1,4 @@
 *.log
 Gemfile.lock
 .DS_Store
-public/results/*
+public/results/.*(har|png)
