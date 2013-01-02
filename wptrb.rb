@@ -77,7 +77,8 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
  :headless, :brawsermob_proxy, :har, :results_path
  
   def initialize(site_url)
-    @results_path = "public/results/"
+    @results_path = File.expand_path(File.dirname(__FILE__)) + "/public/results/"
+    puts "#{results_path}"
     @url = site_url
     @name = "#{site_url.hash}"
     @webdriver_type = "watir" # string format , i.e. : watir || selenium
@@ -92,17 +93,18 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
     @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
     @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b2.xpi"
 
-    @firefox_settings['extensions.firebug.currentVersion']    = "1.11.0b3" # avoid 'first run' tab
-    @firefox_settings["extensions.firebug.previousPlacement"] = 3
+    @firefox_settings["extensions.firebug.currentVersion"]    = "1.11.0b3" # avoid 'first run' tab
+    @firefox_settings["extensions.firebug.previousPlacement"] = 1
     @firefox_settings["extensions.firebug.allPagesActivation"] = "on"
     @firefox_settings["extensions.firebug.onByDefault"]       = true
     @firefox_settings["extensions.firebug.defaultPanelName"]  = "net"
     @firefox_settings["extensions.firebug.net.enableSites"]   = true
     
-    @firefox_settings['extensions.firebug.netexport.autoExportToFile'] = true
-    @firefox_settings['extensions.firebug.netexport.defaultLogDir'] = "#{results_path}"
+    @firefox_settings["extensions.firebug.netexport.autoExportToFile"] = true
+    @firefox_settings["extensions.firebug.netexport.defaultLogDir"] = "#{results_path}"
     @firefox_settings["extensions.firebug.netexport.showPreview"] = false
     @firefox_settings["extensions.firebug.netexport.alwaysEnableAutoExport"] = true
+    
   end
   
   def simulate_display()
@@ -128,9 +130,9 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
       @proxy_server.new_har("#{name}", :capture_headers => true)
       @chrome_settings += %W[ --proxy-server=#{proxy_server.host}:#{proxy_server.port} ]
       @firefox_settings.proxy = Selenium::WebDriver::Proxy.new :http => "#{proxy_server.host}:#{proxy_server.port}"
-      @firefox_settings["network.proxy.type"] = 1
-      @firefox_settings["network.proxy.http"] = "#{proxy_server.host}"
-      @firefox_settings["network.proxy.http_port"] = "#{proxy_server.port}"
+      @firefox_settings['network.proxy.type'] = 1
+      @firefox_settings['network.proxy.http'] = "#{proxy_server.host}"
+      @firefox_settings['network.proxy.http_port'] = proxy_server.port
       puts "proxy set : #{proxy_server.host} #{proxy_server.port}"
     end
   end
@@ -202,7 +204,8 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
     if browser == "chrome" && webdriver == "selenium"
       browser = Selenium::WebDriver.for :chrome ,  :switches => chrome_settings
       #	headless.start_capture
-      browser.navigate.to "#{url}"
+      #browser.navigate.to "#{url}"
+      chrome_get_har("#{url}")
       if !@headless.nil?
       	#@headless.take_screenshot("#{results_path}#{name}.x11.png")
       end
@@ -219,7 +222,8 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
       end
       browser.save_screenshot("#{results_path}#{name}.webdriver.png")
     end
-
+    
+    #sleep 5
     if @har_type == "proxy" 
       @har = @proxy_server.har
       pp @har.to_json
@@ -244,23 +248,27 @@ if opts[:www]
     register Sinatra::Twitter::Bootstrap::Assets
     register Sinatra::Reloader
     #enable :inline_templates
-    use Rack::Session::Pool, :expire_after => 2592000
+    #set :session_secret, ENV["SESSION_KEY"] || 'too secret'
+    enable :sessions
     
+#    use Rack::Session::Pool, :expire_after => 2592000,:key => 'my_app_key',
+#                            :path => '/',:secret => 'coincoin'
+    helpers do
+      #include Rack::Utils
+    end
     get '/' do
       haml:index
     end
     
     get '/test/' do
       test = Wptrb.new(params[:url])
-    	haml:test,:locals => {:test => test}
+    	haml:test,:locals => {:test => test,:debug => params[:debug]}
     end
     
     get '/har/' do
       erb:har
     end
     get '/display/' do
-      session[:validate] = "false"
-      session[:stats] = "true"
       haml:display,:locals => {:name => params[:name]}
     end
    end
