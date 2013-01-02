@@ -127,6 +127,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
       @proxy_server = brawsermob_proxy.create_proxy
       @proxy_server.new_har("#{name}", :capture_headers => true)
       @chrome_settings += %W[ --proxy-server=#{proxy_server.host}:#{proxy_server.port} ]
+      @firefox_settings.proxy = Selenium::WebDriver::Proxy.new :http => "#{proxy_server.host}:#{proxy_server.port}"
       @firefox_settings["network.proxy.type"] = 1
       @firefox_settings["network.proxy.http"] = "#{proxy_server.host}"
       @firefox_settings["network.proxy.http_port"] = "#{proxy_server.port}"
