@@ -4,15 +4,27 @@
 		.row-fluid
 			.span3
 				%h1 wptrb
-			.span9
+			.span6
 				%p "Inspect websites and harden them..."
 				.input-append
-					%input.span10{:type => "text",:placeholder => "url",:name => "url" }
+					%input.input-block-level{:type => "text",:placeholder => "url",:name => "url" }
 					%button.btn.btn-primary{:type => "submit"}
-						%i.icon-search.icon-white
-						GO
-	%button.btn{:"data-toggle" => "collapse", :"data-target" => "#demo"}
-		coin
-	#demo.collapse toto yoyo
+						%i.icon-off.icon-white
+						\=
+				%a{:"data-toggle" => "collapse", :"data-target" => "#demo"}
+					.test
+						%i.icon-wrench 
+						advanced options
+				#demo.collapse
+					%select.span2{:name => "b"}
+						%option{:value => "firefox"} firefox
+						%option{:value => "chrome"} chrome
+					%select.span2{:name => "w"}
+						%option{:value => "watir"} watir
+						%option{:value => "selenium"} selenium
+					%select.span2{:name => "h"}
+						%option{:value => "proxy"} proxy
+						%option{:value => "internal"} internal
+						
 				
 						
