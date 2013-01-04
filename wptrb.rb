@@ -46,24 +46,11 @@ end
 
 
 
-if File.exists?(ENV["HOME"] + '/.wptrb/settings.yml')
-  CONFIG = YAML::load(File.open(ENV["HOME"] + '/.wptrb/settings.yml')) unless defined? CONFIG
-  log_file = File.open(CONFIG["debug_file"], 'a+')
-  log_file.sync = true 
-  logger = Logger.new(log_file) 
-  def logger; settings.logger; end 
-  #set :logger, logger
-  if CONFIG["wptrb_debug"] == "yes"
-  logger.level = Logger::DEBUG 
-  else
-  logger.level = Logger::ERROR
-  end
-end
 
 url = "http://www.nissan.fr" # string format , i.e. : http://my_url.gtld/uri?query_string
 name = "#{url.hash}"
 webdriver_type = "watir" # string format , i.e. : watir || selenium
-browser_type = "chrome" # string format , i.e. : chrome || firefox
+browser_type = "firefox" # string format , i.e. : chrome || firefox
 har_type = "proxy" # string format , i.e. : proxy || internal
 display = ""
 chrome_settings = %W[ --ignore-certificate-errors --always-authorize-plugins --remote-debugging-port=9222] # --kiosk option for fullscreen/notab chromium ; better looking for x11 screenshot or ffmeg output
@@ -74,29 +61,71 @@ vnc_enabled = false # boolean format.
 class Wptrb
 attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :har_type,
  :display , :chrome_settings , :vnc_enabled , :firefox_settings, :proxy_server,
- :headless, :brawsermob_proxy, :har, :results_path
+ :headless, :brawsermob_proxy, :har, :results_path, :proxy_old_settings , :interface_name,
+ :options , :debug_option, :logger
  
-  def initialize(site_url)
-    @results_path = File.expand_path(File.dirname(__FILE__)) + "/public/results/"
-    puts results_path
-    @url = site_url
-    @name = "#{site_url.hash}"
+  def initialize(site_url,options = {})
+    
+    options = {
+      :results_path => File.expand_path(File.dirname(__FILE__)) + "/public/results/",
+      :webdriver_type => "watir" ,
+      :browser_type => "firefox" ,
+      :har_type => "proxy" ,
+      :display => "" ,
+      :chrome_settings => %W[ --ignore-certificate-errors --always-authorize-plugins --remote-debugging-port=9222],
+      :vnc_enabled => false ,
+      :debug_option => false
+      }.merge(options)
+      @logger = Logger.new(STDOUT)
+      logger.info options.inspect
+    
+    
+    
+    if File.exists?(ENV["HOME"] + '/.wptrb/settings.yml')
+      @config = YAML::load(File.open(ENV["HOME"] + '/.wptrb/settings.yml'))
+      log_file = File.open(config["debug_file"], 'a+')
+      log_file.sync = true 
+      @logger = Logger.new(log_file)
+      if defined?(config["results_path"]) ; @results_path = config["results_path"]  ; end
+      if defined?(config["webdriver_type"]) ; @webdriver_type = config["webdriver_type"] ; end
+      if defined?(config["browser_type"]) ; @browser_type = config["browser_type"] ; end
+      if defined?(config["har_type"]) ; @har_type = config["har_type"] ; end
+      if defined?(config["display"]) ; @display = config["display"] ; end
+      if defined?(config["chrome_settings"]) ; @chrome_settings = config["chrome_settings"] ; end
+      if defined?(config["vnc_enabled"]) ; @vnc_enabled = config["vnc_enabled"] ; end
+      if defined?(config["debug_options"]) ; @debug_option = config["debug"] ; end
+    else
+      @results_path = options[:results_path]
+      @webdriver_type = options[:webdriver_type]
+      @browser_type = options[:browser_type]
+      @har_type = options[:har_type]
+      @display = options[:display]
+      @chrome_settings = options[:chrome_settings]
+      @vnc_enabled = options[:vnc_enabled]
+      @debug_option = options[:debug_options]
+    end
+    
+
+    
+    if @debug_option 
+      logger.level = Logger::DEBUG 
+    else
+      logger.level = Logger::ERROR
+    end
+    
+    @url  = site_url
+    @name = "#{Time.now.hash}"
     @name = "#{name}".gsub(/-/,"")
-    puts name
-    @webdriver_type = "watir" # string format , i.e. : watir || selenium
-    @browser_type = "chrome" # string format , i.e. : chrome || firefox
-    @har_type = "proxy" # string format , i.e. : proxy || internal
-    @display = ""
-    @chrome_settings = %W[ --ignore-certificate-errors --always-authorize-plugins --remote-debugging-port=9222]
-    @vnc_enabled = false # boolean format.  
-   
+    logger.debug name
+    
     @firefox_settings = Selenium::WebDriver::Firefox::Profile.new
-    @firefox_settings.add_extension "lib/firefox/addons/firebug-1.11.0b3.xpi"
+    @firefox_settings.assume_untrusted_certificate_issuer=false
+    @firefox_settings.add_extension "lib/firefox/addons/firebug-1.11.1.xpi"
     @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
     @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b2.xpi"
 
-    @firefox_settings["extensions.firebug.currentVersion"]    = "1.11.0b3" # avoid 'first run' tab
-    @firefox_settings["extensions.firebug.previousPlacement"] = 1
+    @firefox_settings["extensions.firebug.currentVersion"]    = "1.11.1" # avoid 'first run' tab
+    @firefox_settings["extensions.firebug.previousPlacement"] = 3
     @firefox_settings["extensions.firebug.allPagesActivation"] = "on"
     @firefox_settings["extensions.firebug.onByDefault"]       = true
     @firefox_settings["extensions.firebug.defaultPanelName"]  = "net"
@@ -106,6 +135,8 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
     @firefox_settings["extensions.firebug.netexport.defaultLogDir"] = "#{results_path}"
     @firefox_settings["extensions.firebug.netexport.showPreview"] = false
     @firefox_settings["extensions.firebug.netexport.alwaysEnableAutoExport"] = true
+    @firefox_settings["extensions.logging.enabled"] = true
+    
     
   end
   
@@ -117,10 +148,10 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
     else
     end
     @chrome_settings += %W[ --display=:#{display} ]
-    puts "display set : #{display}"
+    @logger.debug "display set : #{display}"
     if @vnc_enabled
       system("x11vnc -display :#{display}.0 -ncache 10 &")
-      puts "x1vnc started"
+      logger.debug "x1vnc started"
     end
   end
 
@@ -129,13 +160,25 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
       @brawsermob_proxy = BrowserMob::Proxy::Server.new(path)
       @brawsermob_proxy.start
       @proxy_server = brawsermob_proxy.create_proxy
-      @proxy_server.new_har("#{name}", :capture_headers => true)
+      @proxy_server.new_har("#{name}", :capture_headers => true, :capture_content => true)
       @chrome_settings += %W[ --proxy-server=#{proxy_server.host}:#{proxy_server.port} ]
       @firefox_settings.proxy = Selenium::WebDriver::Proxy.new :http => "#{proxy_server.host}:#{proxy_server.port}"
       @firefox_settings['network.proxy.type'] = 1
       @firefox_settings['network.proxy.http'] = "#{proxy_server.host}"
       @firefox_settings['network.proxy.http_port'] = proxy_server.port
-      puts "proxy set : #{proxy_server.host} #{proxy_server.port}"
+      @firefox_settings['network.proxy.ssl'] = "#{proxy_server.host}"
+      @firefox_settings['network.proxy.ssl_port'] = proxy_server.port
+      #@firefox_settings['devtools.chrome.enabled'] = true
+      if RUBY_PLATFORM.downcase.include?("darwin") && browser_type == "chrome"
+        @interface_name = %x(networksetup -listnetworkserviceorder | grep -C1 en0 | head -n1  | awk '{print $2}')
+        logger.debug "#{interface_name}"
+        @proxy_old_settings = %x(networksetup -getwebproxystate #{interface_name})
+        proxy_set = `/usr/sbin/networksetup -setwebproxy #{interface_name} #{proxy_server.host} #{proxy_server.port}`
+        proxy_activated = `networksetup -setwebproxystate #{interface_name} on`
+        proxy_live_status = `networksetup -getwebproxy #{interface_name}`
+        logger.debug "#{proxy_live_status}"
+      end
+      logger.debug "proxy set : #{proxy_server.host} #{proxy_server.port}"
     end
   end
   
@@ -150,7 +193,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
         conn = EM::HttpRequest.new('http://localhost:9222/json').get
         conn.callback do
           resp = JSON.parse(conn.response)
-          puts "#{resp.size} available tabs, Chrome response: \n#{resp}"
+          logger.debug "#{resp.size} available tabs, Chrome response: \n#{resp}"
 
           # connect to first tab via the WS debug URL
           ws = Faye::WebSocket::Client.new(resp.first['webSocketDebuggerUrl'])
@@ -179,15 +222,19 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
   def test_url(browser,webdriver)
     # browser_type == "chrome" && webdriver_type == "watir"
     if browser == "chrome" && webdriver == "watir"
-      puts "chrome settings set : #{pp chrome_settings}"
+      logger.debug "chrome settings set : #{pp chrome_settings}"
       browser = Watir::Browser.new :chrome , :switches => chrome_settings
       #	headless.start_capture
-      #browser.goto "#{url}"
-      chrome_get_har("#{url}")
+      if har_type == "proxy"
+        browser.goto "#{url}"
+      else
+        chrome_get_har("#{url}")
+      end
       if !@headless.nil?
     	  #@headless.take_screenshot("#{results_path}#{name}.x11.png")
       end
       browser.screenshot.save("#{results_path}#{name}.webdriver.png")
+      browser.close
     end
 
     # browser_type == "firefox" && webdriver_type == "watir"
@@ -200,14 +247,19 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
         #@headless.take_screenshot("#{results_path}#{name}.x11.png")
       end
       browser.screenshot.save("#{results_path}#{name}.webdriver.png")
+      browser.close
     end
 
     # browser_type == "chrome" && webdriver_type == "selenium"
     if browser == "chrome" && webdriver == "selenium"
       browser = Selenium::WebDriver.for :chrome ,  :switches => chrome_settings
       #	headless.start_capture
-      #browser.navigate.to "#{url}"
-      chrome_get_har("#{url}")
+      if har_type == "proxy"
+        browser.get "#{url}"
+      else
+        chrome_get_har("#{url}")
+      end
+
       if !@headless.nil?
       	#@headless.take_screenshot("#{results_path}#{name}.x11.png")
       end
@@ -218,21 +270,24 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
     if browser == "firefox" && webdriver == "selenium"
       browser = Selenium::WebDriver.for :firefox , :profile => firefox_settings 
       #	headless.start_capture
-      browser.navigate.to "#{url}"
+      browser.get "#{url}"
       if !@headless.nil?
       	#@headless.take_screenshot("#{results_path}#{name}.x11.png")
       end
       browser.save_screenshot("#{results_path}#{name}.webdriver.png")
     end
     
-    #sleep 5
     if @har_type == "proxy" 
       @har = @proxy_server.har
       pp @har.to_json
       @har.save_to "#{results_path}#{name}.har"
+      pp "#{results_path}#{name}.har"
       @brawsermob_proxy.stop
+      if RUBY_PLATFORM.downcase.include?("darwin") && browser_type == "chrome"
+        proxy_off = `networksetup -setwebproxystate #{i} off`
+      end
     end
-    browser.close
+    
     if !@headless.nil?
       @headless.destroy
     end
@@ -264,14 +319,25 @@ if opts[:www]
     
     get '/test/' do
       test = Wptrb.new(params[:url])
-    	haml:test,:locals => {:test => test,:debug => params[:debug]}
+      defined?(params[:b]) ? www_browser = params[:b] : www_browser = test.browser
+      defined?(params[:w]) ? www_webdriver = params[:w] : www_webdriver = test.webdriver
+      defined?(params[:h]) ? www_proxy = params[:h] : www_proxy = test.har_type
+      www_url = params[:url]
+      Thread.abort_on_exception = true
+      Thread.new do
+        test.simulate_display
+        puts test.inspect
+        test.proxy("lib/browsermob-proxy/2.0-beta-6/bin/browsermob-proxy")
+        test.test_url("#{www_browser}","#{www_webdriver}")
+      end
+    	haml:test,:locals => {:test => test,:debug => params[:debug],:www_proxy => www_proxy, :www_webdriver => www_webdriver,:www_browser => www_browser,:www_url => www_url  }
     end
     
     get '/har/' do
       erb:har
     end
     get '/display/' do
-      haml:display,:locals => {:name => params[:name],:host => request.env["SERVER_NAME"],:port => request.port,:yslow => params[:yslow] }
+      haml:display,:locals => {:name => params[:name],:host => request.env["SERVER_NAME"],:port => request.port,:yslow => params[:yslow ],:www_url => params[:www_url] }
     end
    end
    WptrbWww.run!
