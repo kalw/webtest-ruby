@@ -1,5 +1,6 @@
-- file_name = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}.har"
-- if File.exist? "#{file_name}"
+%p
+- png_path = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/*.png"
+- if !Dir.glob("#{png_path}").empty?
 	:javascript
 		(function() {
 		    var har = document.createElement("script");
@@ -7,24 +8,27 @@
 		    har.setAttribute("id", "har");
 		    har.setAttribute("async", "true");
 		    document.documentElement.firstChild.appendChild(har);
-		})();
-	= if "#{yslow}" == "yes" 
-		.raw-fluid
+		})(); 
+	- har_full_path = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/*.har"
+	- har_full_path = Dir["#{har_full_path}"]
+	- har_full_path = har_full_path[0]
+	- har_name = File.basename(har_full_path)
+	.raw-fluid
+		- if "#{yslow}" == "yes"
 			.span4{:style => "height: 300px !important; overflow: scroll;"}
 				%table.table.table-condensed
-					- file_name = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}.har"
-					- yslow = %x(yslow -i grade -f plain -r ydefault -d #{file_name})
-					- pp "#{yslow}.inspect"
+					- yslow = %x(yslow -i grade -f plain -r ydefault -d #{har_full_path})
+					- logger.info "#{yslow}"
 					%h2 
 						YSLOW 
 					%pre 
 						- yslow.inspect.gsub('"',"").split(/\\n/).each do |info|
 							#{info}
-			.span4{:style => "height: 300px !important; overflow: scroll;"}
-				%p
-				%img{:src => "/results/#{name}.webdriver.png"}
-		- puts "#{yslow} #{file_name}"
-	.har{:id =>"har",:"data-har" => "/results/#{name}.har", :validate => "false",:stats => "true",:height => "300"}
+		.span4{:style => "height: 300px !important; overflow: scroll;"}
+			%h2
+				SCREENSHOT
+			%img{:src => "/results//#{name}/#{name}.webdriver.png"}
+	.har{:id =>"har",:"data-har" => "/results/#{name}/#{har_name}", :validate => "false",:stats => "true",:height => "300"}
 - else
 	%script{:type => "text/javascript", :src => "http://fgnass.github.com/spin.js/dist/spin.js"}
 	:javascript
