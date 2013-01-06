@@ -62,7 +62,7 @@ class Wptrb
 attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :har_type,
  :display , :chrome_settings , :vnc_enabled , :firefox_settings, :proxy_server,
  :headless, :brawsermob_proxy, :har, :results_path, :proxy_old_settings , :interface_name,
- :options , :debug_option, :logger
+ :options , :debug_option, :logger, :browser
  
   def initialize(site_url,options = {})
     
@@ -116,25 +116,30 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
     @url  = site_url
     @name = "#{Time.now.hash}"
     @name = "#{name}".gsub(/-/,"")
-    logger.debug name
+    @results_path = "#{results_path}#{name}/"
+    logger.debug "Name : #{name} | Result Path : #{results_path}"
     
     @firefox_settings = Selenium::WebDriver::Firefox::Profile.new
     @firefox_settings.assume_untrusted_certificate_issuer=false
-    @firefox_settings.add_extension "lib/firefox/addons/firebug-1.11.1.xpi"
+    @firefox_settings.add_extension "lib/firefox/addons/firebug-1.11.0b3.xpi"
     @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
-    @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b2.xpi"
+    @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b3.xpi"
 
     @firefox_settings["extensions.firebug.currentVersion"]    = "1.11.1" # avoid 'first run' tab
-    @firefox_settings["extensions.firebug.previousPlacement"] = 3
+    @firefox_settings["extensions.firebug.previousPlacement"] = 1
     @firefox_settings["extensions.firebug.allPagesActivation"] = "on"
     @firefox_settings["extensions.firebug.onByDefault"]       = true
     @firefox_settings["extensions.firebug.defaultPanelName"]  = "net"
     @firefox_settings["extensions.firebug.net.enableSites"]   = true
-    
+    @firefox_settings["extensions.firebug.DBG_NETEXPORT"] = false
+    @firefox_settings["extensions.firebug.consoleexport.active"] = false
     @firefox_settings["extensions.firebug.netexport.autoExportToFile"] = true
     @firefox_settings["extensions.firebug.netexport.defaultLogDir"] = "#{results_path}"
     @firefox_settings["extensions.firebug.netexport.showPreview"] = false
     @firefox_settings["extensions.firebug.netexport.alwaysEnableAutoExport"] = true
+    @firefox_settings["extensions.firebug.netexport.Automation"] = true
+    @firefox_settings["extensions.firebug.netexport.sendToConfirmation"] = false
+    @firefox_settings["extensions.firebug.netexport.saveFiles"] = true
     @firefox_settings["extensions.logging.enabled"] = true
     
     
@@ -175,7 +180,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
         @proxy_old_settings = %x(networksetup -getwebproxystate #{interface_name})
         proxy_set = `/usr/sbin/networksetup -setwebproxy #{interface_name} #{proxy_server.host} #{proxy_server.port}`
         proxy_activated = `networksetup -setwebproxystate #{interface_name} on`
-        proxy_live_status = `networksetup -getwebproxy #{interface_name}`
+        proxy_live_status = %W(`networksetup -getwebproxy #{interface_name}`)
         logger.debug "#{proxy_live_status}"
       end
       logger.debug "proxy set : #{proxy_server.host} #{proxy_server.port}"
@@ -211,7 +216,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
 
           ws.onmessage = lambda do |event|
             # print event notifications from Chrome to the console
-            p [:new_message, JSON.parse(event.data)]
+            logger.info [:new_message, JSON.parse(event.data)]
           end
         end
       end
@@ -220,42 +225,56 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
 
 
   def test_url(browser,webdriver)
+    if !FileTest::directory?("#{results_path}")
+      Dir::mkdir("#{results_path}")
+    end
     # browser_type == "chrome" && webdriver_type == "watir"
     if browser == "chrome" && webdriver == "watir"
       logger.debug "chrome settings set : #{pp chrome_settings}"
-      browser = Watir::Browser.new :chrome , :switches => chrome_settings
+      @browser = Watir::Browser.new :chrome , :switches => chrome_settings
       #	headless.start_capture
       if har_type == "proxy"
-        browser.goto "#{url}"
+        @browser.goto "#{url}"
+        pp @browser.performance.timing
       else
         chrome_get_har("#{url}")
       end
       if !@headless.nil?
     	  #@headless.take_screenshot("#{results_path}#{name}.x11.png")
       end
-      browser.screenshot.save("#{results_path}#{name}.webdriver.png")
-      browser.close
+      @browser.screenshot.save("#{results_path}#{name}.webdriver.png")
     end
 
     # browser_type == "firefox" && webdriver_type == "watir"
     if browser == "firefox" && webdriver == "watir"
       driver = Selenium::WebDriver.for :firefox, :profile => firefox_settings
-      browser = Watir::Browser.new(driver) 
+      @browser = Watir::Browser.new(driver) 
       #	headless.start_capture
-      browser.goto "#{url}"
+      if har_type == "proxy"
+        @browser.goto "#{url}"
+        # need to calculate onload and on contentLoad for har injection later
+      else
+        sleep 5 # wait for plugins to load correctly
+        @browser.goto "#{url}"
+        sleep 15 # wait for netexport har creation
+        file_name = File.expand_path(File.dirname(__FILE__)) + "/public/results/#{name}/*.har"
+        file_name = Dir["#{file_name}"]
+        File.rename(file_name[0],"#{results_path}#{name}.fb.har")
+      end
       if !@headless.nil?
         #@headless.take_screenshot("#{results_path}#{name}.x11.png")
       end
-      browser.screenshot.save("#{results_path}#{name}.webdriver.png")
-      browser.close
+      @browser.screenshot.save("#{results_path}#{name}.webdriver.png")
     end
 
     # browser_type == "chrome" && webdriver_type == "selenium"
     if browser == "chrome" && webdriver == "selenium"
-      browser = Selenium::WebDriver.for :chrome ,  :switches => chrome_settings
+      @browser = Selenium::WebDriver.for :chrome ,  :switches => chrome_settings
       #	headless.start_capture
       if har_type == "proxy"
-        browser.get "#{url}"
+        @browser.get "#{url}"
+        #performance_timings = browser.execute_script("return window.performance.timing ;")
+        #pp performance_timings.inspect
       else
         chrome_get_har("#{url}")
       end
@@ -263,18 +282,29 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
       if !@headless.nil?
       	#@headless.take_screenshot("#{results_path}#{name}.x11.png")
       end
-      browser.save_screenshot("#{results_path}#{name}.webdriver.png")
+      @browser.save_screenshot("#{results_path}#{name}.webdriver.png")
     end
 
     # browser_type == "firefox" && webdriver_type == "selenium"
     if browser == "firefox" && webdriver == "selenium"
-      browser = Selenium::WebDriver.for :firefox , :profile => firefox_settings 
+      @browser = Selenium::WebDriver.for :firefox , :profile => firefox_settings 
       #	headless.start_capture
-      browser.get "#{url}"
+      if har_type == "proxy"
+        @browser.get "#{url}"
+        # need to calculate onload and on contentLoad for har injection later
+        #performance_timings = browser.execute_script("return window.performance.timing ;")
+      else
+        sleep 5 # wait for plugins to load correctly
+        @browser.goto "#{url}"
+        sleep 15 # wait for netexport har creation
+        file_name = File.expand_path(File.dirname(__FILE__)) + "/public/results/#{name}/*.har"
+        file_name = Dir["#{file_name}"]
+        File.rename(file_name[0],"#{results_path}#{name}.fb.har")
+      end
       if !@headless.nil?
       	#@headless.take_screenshot("#{results_path}#{name}.x11.png")
       end
-      browser.save_screenshot("#{results_path}#{name}.webdriver.png")
+      @browser.save_screenshot("#{results_path}#{name}.webdriver.png")
     end
     
     if @har_type == "proxy" 
@@ -296,7 +326,6 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
 end
 
 if opts[:www]
-  #require 'sinatra'
   require 'sinatra/base'
   require "sinatra/reloader" 
   require 'sinatra/twitter-bootstrap'
@@ -321,14 +350,22 @@ if opts[:www]
       test = Wptrb.new(params[:url])
       defined?(params[:b]) ? www_browser = params[:b] : www_browser = test.browser
       defined?(params[:w]) ? www_webdriver = params[:w] : www_webdriver = test.webdriver
-      defined?(params[:h]) ? www_proxy = params[:h] : www_proxy = test.har_type
+      if defined?(params[:h]) 
+        www_proxy = params[:h] 
+        test.har_type = params[:h] 
+      else  
+        www_proxy = test.har_type 
+      end
       www_url = params[:url]
       Thread.abort_on_exception = true
       Thread.new do
         test.simulate_display
         puts test.inspect
-        test.proxy("lib/browsermob-proxy/2.0-beta-6/bin/browsermob-proxy")
+        if www_proxy == "proxy"
+          test.proxy("lib/browsermob-proxy/2.0-beta-6/bin/browsermob-proxy")
+        end
         test.test_url("#{www_browser}","#{www_webdriver}")
+        test.browser.quit
       end
     	haml:test,:locals => {:test => test,:debug => params[:debug],:www_proxy => www_proxy, :www_webdriver => www_webdriver,:www_browser => www_browser,:www_url => www_url  }
     end
