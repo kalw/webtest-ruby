@@ -81,7 +81,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
       }.merge(defaults)
       @options = defaults
       @logger = Logger.new(STDOUT)
-      @logger.info pp options.inspect
+      pp "innt options : #{options.inspect}"
     
     
     
@@ -279,12 +279,17 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
         else
           sleep 5 # wait for plugins to load correctly
           @browser.goto "#{url}"
-          sleep 20 # wait for netexport har creation
-          file_name = File.expand_path(File.dirname(__FILE__)) + "/public/results/#{name}/*.har"
-          file_name = Dir["#{file_name}"].grep(/\+/)
-          #if !Dir.glob("#{file_name}").empty?
-            File.rename(file_name[0],"#{har_name["#{view_index}"]}")
-          #end
+          # sleep 20 # wait for netexport har creation
+          Timeout::timeout(60) {
+            while (true) do
+              if !Dir.glob(Dir["#{File.expand_path(File.dirname(__FILE__))}/public/results/#{name}/*.har"].grep(/\+/)).empty?
+                file_name = Dir.glob(Dir["#{File.expand_path(File.dirname(__FILE__))}/public/results/#{name}/*.har"].grep(/\+/))
+                File.rename(file_name[0],"#{har_name["#{view_index}"]}")
+                break
+              end
+              sleep 0.5
+            end
+          }
         end
         if !@headless.nil?
           #@headless.take_screenshot("#{results_path}#{name}.x11.png")
@@ -327,12 +332,17 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
         else
           sleep 5 # wait for plugins to load correctly
           @browser.goto "#{url}"
-          sleep 20 # wait for netexport har creation
-          file_name = File.expand_path(File.dirname(__FILE__)) + "/public/results/#{name}/*.har"
-          file_name = Dir["#{file_name}"].grep(/\+/)
-          if !Dir.glob("#{file_name}").empty?
-            File.rename(file_name[0],"#{har_name["#{view_index}"]}")
-          end
+          # sleep 20 # wait for netexport har creation
+          Timeout::timeout(60) {
+            while (true) do
+              if !Dir.glob(Dir["#{File.expand_path(File.dirname(__FILE__))}/public/results/#{name}/*.har"].grep(/\+/)).empty?
+                file_name = Dir.glob(Dir["#{File.expand_path(File.dirname(__FILE__))}/public/results/#{name}/*.har"].grep(/\+/))
+                File.rename(file_name[0],"#{har_name["#{view_index}"]}")
+                break
+              end
+              sleep 0.5
+            end
+          }
         end
         if !@headless.nil?
         	#@headless.take_screenshot("#{results_path}#{name}.x11.png")
@@ -380,11 +390,20 @@ if opts[:www]
     end
     
     get '/test/' do
-      test = Wptrb.new(params[:url],:test_cycles => params[:c])
+      pp "test page params : #{params.inspect}"
+      test = Wptrb.new(params[:url])
       if defined?(params[:b]) ; test.browser_type     = params[:b] ; end
       if defined?(params[:w]) ; test.webdriver_type   = params[:w] ; end
       if defined?(params[:h]) ; test.har_type         = params[:h] ; end
-      if defined?(params[:c]) ; test.test_cycles      = params[:c] ; end
+      if params[:c] == "2"
+         test.test_cycles = "2"
+      else
+        test.test_cycles = "1"
+      end
+      
+      pp "Testing with : #{test.inspect}"
+      pp "har_type : #{test.har_type}"
+      pp "cycles : #{test.test_cycles}"
       Thread.abort_on_exception = true
       Thread.new do
         test.simulate_display
