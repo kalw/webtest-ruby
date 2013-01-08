@@ -1,5 +1,5 @@
 :javascript
-	window.location="/display/?name=#{test.name}&www_url=#{www_url}&yslow=yes"
+	window.location="/display/?name=#{test.name}&www_url=#{test.url}&cycles=#{test.test_cycles}&yslow=yes"
 
 = if "#{debug}" == "yes" 
 	%ul
