@@ -127,9 +127,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
     
     @firefox_settings = Selenium::WebDriver::Firefox::Profile.new
     @firefox_settings.assume_untrusted_certificate_issuer=false
-    @firefox_settings.add_extension "lib/firefox/addons/firebug-1.11.0b3.xpi"
-    @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
-    @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b3.xpi"
+    
 
     @firefox_settings["extensions.firebug.currentVersion"]    = "1.11.1" # avoid 'first run' tab
     @firefox_settings["extensions.firebug.previousPlacement"] = 1
@@ -146,7 +144,6 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
     @firefox_settings["extensions.firebug.netexport.Automation"] = true
     @firefox_settings["extensions.firebug.netexport.sendToConfirmation"] = false
     @firefox_settings["extensions.firebug.netexport.saveFiles"] = true
-    @firefox_settings["extensions.logging.enabled"] = true
     
     
   end
@@ -250,8 +247,10 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
           @browser = Watir::Browser.new :chrome , :switches => chrome_settings
         end
         #	headless.start_capture
+        pp "test_url : har_type = #{har_type}"
         if har_type == "proxy"
           @browser.goto "#{url}"
+          sleep 20 # some sites need more time to render even after onreadystate
           # need to calculate onload and on onContentLoad for har injection later
           #performance_timings = browser.execute_script("return window.performance.timing ;")
           #pp performance_timings.inspect
@@ -266,6 +265,13 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
 
       # browser_type == "firefox" && webdriver_type == "watir"
       if browser == "firefox" && webdriver == "watir"
+        if har_type == "proxy"
+          # 
+        else
+          @firefox_settings.add_extension "lib/firefox/addons/firebug-1.11.0b3.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b3.xpi"
+        end
         if view_index == 0
           driver = Selenium::WebDriver.for :firefox, :profile => firefox_settings
           @browser = Watir::Browser.new(driver)
@@ -273,13 +279,13 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
         #	headless.start_capture
         if har_type == "proxy"
           @browser.goto "#{url}"
+          sleep 20 # some sites need more time to render even after onreadystate
           # need to calculate onload and on onContentLoad for har injection later
           #performance_timings = browser.execute_script("return window.performance.timing ;")
           #pp performance_timings.inspect
         else
           sleep 5 # wait for plugins to load correctly
           @browser.goto "#{url}"
-          # sleep 20 # wait for netexport har creation
           Timeout::timeout(60) {
             while (true) do
               if !Dir.glob(Dir["#{File.expand_path(File.dirname(__FILE__))}/public/results/#{name}/*.har"].grep(/\+/)).empty?
@@ -305,6 +311,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
         #	headless.start_capture
         if har_type == "proxy"
           @browser.get "#{url}"
+          sleep 20 # some sites need more time to render even after onreadystate
           # need to calculate onload and on onContentLoad for har injection later
           #performance_timings = browser.execute_script("return window.performance.timing ;")
           #pp performance_timings.inspect
@@ -320,12 +327,20 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
 
       # browser_type == "firefox" && webdriver_type == "selenium"
       if browser == "firefox" && webdriver == "selenium"
+        if har_type == "proxy"
+          # 
+        else
+          @firefox_settings.add_extension "lib/firefox/addons/firebug-1.11.0b3.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b3.xpi"
+        end
         if view_index == 0
           @browser = Selenium::WebDriver.for :firefox , :profile => firefox_settings 
         end
         #	headless.start_capture
         if har_type == "proxy"
           @browser.get "#{url}"
+          sleep 20 # some sites need more time to render even after onreadystate
           # need to calculate onload and on onContentLoad for har injection later
           #performance_timings = browser.execute_script("return window.performance.timing ;")
           #pp performance_timings.inspect
@@ -355,14 +370,17 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
         pp @har.to_json
         @har.save_to "#{har_name["#{view_index}"]}"
         pp "#{har_name["#{view_index}"]}.har"
-        @brawsermob_proxy.stop
-        if RUBY_PLATFORM.downcase.include?("darwin") && browser_type == "chrome"
-          proxy_off = `networksetup -setwebproxystate #{i} off`
-        end
+ 
       end
   end
     if !@headless.nil?
       @headless.destroy
+    end
+    if @har_type == "proxy"
+      @brawsermob_proxy.stop
+      if RUBY_PLATFORM.downcase.include?("darwin") && browser_type == "chrome"
+        proxy_off = `networksetup -setwebproxystate #{i} off`
+      end
     end
   end
 
