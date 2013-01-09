@@ -39,6 +39,7 @@ EOS
   opt :har, "har creation type, i.e ; browsermob proxy or internal browser method."
   opt :url, "url to inspect in \"http(s)://domain.gtld/uri?query_string format\""
   opt :cycles, "cycles numbers , i.e. wo/cache then w/cache "
+  opt :failsafe, "wait for 20 sec after onready state in order to catch some RIA long loading sites"
         
 
 end
@@ -109,6 +110,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
       @vnc_enabled = options[:vnc_enabled]
       @debug_option = options[:debug_options]
       @test_cycles = options[:test_cycles]
+      @failsafe = options[:failsafe]
     end
     
     @logger.info pp @chrome_settings.inspect
@@ -376,6 +378,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
     if !@headless.nil?
       @headless.destroy
     end
+    @browser.quit
     if @har_type == "proxy"
       @brawsermob_proxy.stop
       if RUBY_PLATFORM.downcase.include?("darwin") && browser_type == "chrome"
