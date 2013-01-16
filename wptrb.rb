@@ -240,7 +240,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
       @png_x11_name={}
       @har_name={}
       @png_wdr_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.webdriver.png"
-      @png_x11_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.x11.png"
+      @png_x11_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.x11.jpg"
       @har_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.har"
       # browser_type == "chrome" && webdriver_type == "watir"
       if browser == "chrome" && webdriver == "watir"
@@ -260,7 +260,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
           chrome_get_har("#{url}")
         end
         if !@headless.nil?
-      	  #@headless.take_screenshot("#{results_path}#{name}.x11.png")
+      	  @headless.take_screenshot("#{results_path}#{name}.x11.jpg")
         end
         @browser.screenshot.save("#{png_wdr_name["#{view_index}"]}")
       end
@@ -300,7 +300,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
           }
         end
         if !@headless.nil?
-          #@headless.take_screenshot("#{results_path}#{name}.x11.png")
+          @headless.take_screenshot("#{results_path}#{name}.x11.jpg")
         end
         @browser.screenshot.save("#{png_wdr_name["#{view_index}"]}")
       end
@@ -322,7 +322,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
         end
 
         if !@headless.nil?
-        	#@headless.take_screenshot("#{results_path}#{name}.x11.png")
+        	@headless.take_screenshot("#{results_path}#{name}.x11.jpg")
         end
         @browser.save_screenshot("#{png_wdr_name["#{view_index}"]}")
       end
@@ -362,7 +362,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
           }
         end
         if !@headless.nil?
-        	#@headless.take_screenshot("#{results_path}#{name}.x11.png")
+        	@headless.take_screenshot("#{results_path}#{name}.x11.jpg")
         end
         @browser.save_screenshot("#{png_wdr_name["#{view_index}"]}")
       end
