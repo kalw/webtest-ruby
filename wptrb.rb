@@ -1,3 +1,4 @@
+require 'rubygems' if RUBY_VERSION < '1.9' 
 require 'watir-webdriver'
 require 'watir-webdriver-performance'
 require 'headless'
@@ -16,17 +17,17 @@ require 'awesome_print'
 opts = Trollop::options do
   version "wptrb 0.0.1 @ 2013 Regis A. Despres"
   banner <<-EOS
-WTPRB is either a webpagetest agent and a simple url inspector.
-  * In simple mode,  browse site url and report some "basic" statistics on stdout
-  * Once wpt_server_url and location_name options set,  browse site url and report
-  to webpagetest instance.
-  * In webview, WPTRB launch a sinatra app that can fire up both mode
+  WTPRB is either a webpagetest agent and a simple url inspector.
+    * In simple mode,  browse site url and report some "basic" statistics on stdout
+    * Once wpt_server_url and location_name options set,  browse site url and report
+    to webpagetest instance.
+    * In webview, WPTRB launch a sinatra app that can fire up both mode
 
-Usage:
-       wptrb [options] <url>
+  Usage:
+         wptrb [options] <url>
        
-where [options] and <url> are:
-EOS
+  where [options] and <url> are:
+  EOS
 
   opt :config, "read or override configuration from file."
   opt :www, "start webview sinatra app."
@@ -41,7 +42,6 @@ EOS
   opt :cycles, "cycles numbers , i.e. wo/cache then w/cache "
   opt :failsafe, "wait for 20 sec after onready state in order to catch some RIA long loading sites"
         
-
 end
 #Trollop::die "need at least one url" if ARGV.empty? 
 #Trollop::die :file, "must exist" unless File.exist?(opts[:file]) if opts[:file]
@@ -61,11 +61,11 @@ end
 
 
 class Wptrb
-attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :har_type,
- :display , :chrome_settings , :vnc_enabled , :firefox_settings, :proxy_server,
- :headless, :brawsermob_proxy, :har, :results_path, :proxy_old_settings , :interface_name,
- :options , :debug_option, :logger, :browser, :png_wdr_name , :har_name , :png_x11_name,
- :test_cycles
+  attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :har_type,
+   :display , :chrome_settings , :vnc_enabled , :firefox_settings, :proxy_server,
+   :headless, :brawsermob_proxy, :har, :results_path, :proxy_old_settings , :interface_name,
+   :options , :debug_option, :logger, :browser, :png_wdr_name , :har_name , :png_x11_name,
+   :test_cycles
  
   def initialize(site_url,defaults = {})
     
@@ -194,39 +194,35 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
   end
   
   def chrome_get_har(url)
-    if har_type == "internal"
-      require 'em-http'
-      require 'faye/websocket'
-      require 'json'
-
-      EM.run do
-        # Chrome runs an HTTP handler listing available tabs
-        conn = EM::HttpRequest.new('http://localhost:9222/json').get
-        conn.callback do
-          resp = JSON.parse(conn.response)
-          logger.debug "#{resp.size} available tabs, Chrome response: \n#{resp}"
-
-          # connect to first tab via the WS debug URL
-          ws = Faye::WebSocket::Client.new(resp.first['webSocketDebuggerUrl'])
-          ws.onopen = lambda do |event|
-            # once connected, enable network tracking
-            ws.send JSON.dump({id: 1, method: 'Network.enable'})
-
-            # tell Chrome to navigate to twitter.com and look for "chrome" tweets
-            ws.send JSON.dump({
-              id: 2,
-              method: 'Page.navigate',
-              params: {url: '#{url}' + rand(100).to_s}
-            })
-          end
-
-          ws.onmessage = lambda do |event|
-            # print event notifications from Chrome to the console
-            logger.info [:new_message, JSON.parse(event.data)]
-          end
-        end
-      end
-    end
+#    if har_type == "internal"
+#      require 'em-http'
+#      require 'faye/websocket'
+#      require 'json'
+#
+#      EM.run do
+#        # Chrome runs an HTTP handler listing available tabs
+#        conn = EM::HttpRequest.new('http://localhost:9222/json').get
+#        conn.callback do
+#          resp = JSON.parse(conn.response)
+#          logger.debug "#{resp.size} available tabs, Chrome response: \n#{resp}"
+#
+#          # connect to first tab via the WS debug URL
+#          ws = Faye::WebSocket::Client.new(resp.first['webSocketDebuggerUrl'])
+#          ws.onopen = lambda do |event|
+#            # once connected, enable network tracking
+#            ws.send JSON.dump({id: 1, method: 'Network.enable'})
+#
+#            # tell Chrome to navigate to twitter.com and look for "chrome" tweets
+#            ws.send JSON.dump({id: 2, method: 'Page.navigate', params: {url: '#{url}' + rand(100).to_s}})
+#          end
+#
+#          ws.onmessage = lambda do |event|
+#            # print event notifications from Chrome to the console
+#            logger.info [:new_message, JSON.parse(event.data)]
+#          end
+#        end
+#      end
+#    end
   end
 
 
@@ -374,7 +370,7 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
         pp "#{har_name["#{view_index}"]}.har"
  
       end
-  end
+    end
     if !@headless.nil?
       @headless.destroy
     end
@@ -389,77 +385,81 @@ attr_accessor :resuls_path, :url , :name , :webdriver_type , :browser_type , :ha
 
 end
 
-if opts[:www]
-  require 'sinatra/base'
-  require "sinatra/reloader" 
-  require 'sinatra/twitter-bootstrap'
-  require 'haml'  
-  class WptrbWww < Sinatra::Base
-    register Sinatra::Twitter::Bootstrap::Assets
-    register Sinatra::Reloader
-    #enable :inline_templates
-    #set :session_secret, ENV["SESSION_KEY"] || 'too secret'
-    #enable :sessions
+
+require 'sinatra/base'
+require "sinatra/reloader" 
+require 'sinatra/twitter-bootstrap'
+require 'haml'  
+
+class WptrbWww < Sinatra::Base
+  register Sinatra::Twitter::Bootstrap::Assets
+  register Sinatra::Reloader
+  #enable :inline_templates
+  #set :session_secret, ENV["SESSION_KEY"] || 'too secret'
+  #enable :sessions
     
-    #use Rack::Session::Pool, :expire_after => 2592000,:key => 'my_app_key',
-    #  :path => '/',:secret => 'coincoin'
-    helpers do
-      #include Rack::Utils
-    end
-    get '/' do
-      haml:index
-    end
+  #use Rack::Session::Pool, :expire_after => 2592000,:key => 'my_app_key',
+  #  :path => '/',:secret => 'coincoin'
+  helpers do
+    #include Rack::Utils
+  end
+  get '/' do
+    haml:index
+  end
     
-    get '/test/' do
-      pp "test page params : #{params.inspect}"
-      test = Wptrb.new(params[:url])
-      if defined?(params[:b]) ; test.browser_type     = params[:b] ; end
-      if defined?(params[:w]) ; test.webdriver_type   = params[:w] ; end
-      if defined?(params[:h]) ; test.har_type         = params[:h] ; end
-      if params[:c] == "2"
-         test.test_cycles = "2"
-      else
-        test.test_cycles = "1"
-      end
+  get '/test/' do
+    pp "test page params : #{params.inspect}"
+    test = Wptrb.new(params[:url])
+    if defined?(params[:b]) ; test.browser_type     = params[:b] ; end
+    if defined?(params[:w]) ; test.webdriver_type   = params[:w] ; end
+    if defined?(params[:h]) ; test.har_type         = params[:h] ; end
+    if params[:c] == "2"
+       test.test_cycles = "2"
+    else
+      test.test_cycles = "1"
+    end
       
-      pp "Testing with : #{test.inspect}"
-      pp "har_type : #{test.har_type}"
-      pp "cycles : #{test.test_cycles}"
-      Thread.abort_on_exception = true
-      Thread.new do
-        test.simulate_display
-        if test.har_type == "proxy"
-          test.proxy("lib/browsermob-proxy/2.0-beta-6/bin/browsermob-proxy")
-        end
-        test.test_url("#{test.browser_type}","#{test.webdriver_type}")
-        test.browser.quit
+    pp "Testing with : #{test.inspect}"
+    pp "har_type : #{test.har_type}"
+    pp "cycles : #{test.test_cycles}"
+    Thread.abort_on_exception = true
+    Thread.new do
+      test.simulate_display
+      if test.har_type == "proxy"
+        test.proxy("lib/browsermob-proxy/2.0-beta-6/bin/browsermob-proxy")
       end
-    	haml:test,:locals => {
-        :test => test,
-        :debug => params[:debug],
-        :www_proxy => test.har_type,
-        :www_webdriver => test.webdriver_type,
-        :www_browser => test.browser_type,
-        :www_url => test.url,
-        :cycles => test.test_cycles
-      }
+      test.test_url("#{test.browser_type}","#{test.webdriver_type}")
+      test.browser.quit
     end
+  	haml:test,:locals => {
+      :test => test,
+      :debug => params[:debug],
+      :www_proxy => test.har_type,
+      :www_webdriver => test.webdriver_type,
+      :www_browser => test.browser_type,
+      :www_url => test.url,
+      :cycles => test.test_cycles
+    }
+  end
     
-    get '/har/' do
-      erb:har
-    end
-    get '/display/' do
-      defined?(params[:cycles]) ? cycles = params[:cycles] : cycles = test.options[:test_cycles]
-      haml:display,:locals => {
-        :name => params[:name],
-        :host => request.env["SERVER_NAME"],
-        :port => request.port,
-        :yslow => params[:yslow ],
-        :www_url => params[:www_url],
-        :cycles => cycles
-      }
-    end
-   end
+  get '/har/' do
+    erb:har
+  end
+  get '/display/' do
+    defined?(params[:cycles]) ? cycles = params[:cycles] : cycles = test.options[:test_cycles]
+    haml:display,:locals => {
+      :name => params[:name],
+      :host => request.env["SERVER_NAME"],
+      :port => request.port,
+      :yslow => params[:yslow ],
+      :www_url => params[:www_url],
+      :cycles => cycles
+    }
+  end
+end
+ 
+ 
+if opts[:www]
    WptrbWww.run!
 end
 

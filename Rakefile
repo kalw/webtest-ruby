@@ -1,28 +1,63 @@
+APP = "webtest-ruby"
+ENV['RACK_ENV'] = 'test'
+
   require 'rack/test'
   require 'test/unit'
   require './wptrb.rb'
 
-desc "Local: Tests sinatra"
-task :local_sinatra => "Gemfile.lock" do
+desc "Tests webtest-ruby w/ web view. Test Flight only"
+task :standalone => "Gemfile.lock" do
+  class WptrbTest < Test::Unit::TestCase
+    include Rack::Test::Methods
+	  def app
+      WptrbWww
+	  end
+	  def test_it_runs
+	    get '/'
+	    assert last_response.ok?
+	    assert last_response.body.include?('harden')
+	  end
+  end
+end
 
-	class CheckSinatraWptrb < Test::Unit::TestCase
+namespace :standalone do
+  desc "Validate test w/ default opt is triggered and redir is showed"
+  task :test_url => "Gemfile.lock" do
+    class WptrbTest < Test::Unit::TestCase
+      include Rack::Tests::Methods
+      def app
+        WptrbWww
+      end
+      def testing_url_triggered
+        get '/test/'
+        assert last_response.ok?
+        assert last_response.assert_response(:redirect)
+      end
+    end
+  end
+end
+
+desc "Tests webtest w/ command line"
+task :command_line_webtest_ruby => "Gemfile.lock" do
+
+	class WptrbTest < Test::Unit::TestCase
 	  include Rack::Test::Methods
 
 	  def app
-	    Sinatra::Application
+      WptrbWww
 	  end
 
 	  def test_it_runs
 	    get '/'
-#	    assert last_response.ok?
-	    last_response.body.include?('harden')
+	    assert last_response.ok?
+	    assert last_response.body.include?('harden')
 	  end
 
-	  def test_it_connects
-	    get '/test/', :url => "?url=http%3A%2F%2Fwww.github.com'"
-	    assert last_response.ok?
-	    last_response.body.include?('HOME')
-	  end
+#	  def test_it_connects
+#	    get '/test/', :url => "?url=http%3A%2F%2Fwww.github.com'"
+#	    assert last_response.ok?
+#	    last_response.body.include?('github')
+#	  end
 
 	end
 
@@ -33,4 +68,4 @@ file "Gemfile.lock" => "Gemfile" do
   sh "bundle && touch Gemfile.lock"
 end
 
-task :default => 'local_sinatra'
+task :default => 'standalone'
