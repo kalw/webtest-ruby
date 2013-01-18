@@ -3,7 +3,7 @@ rvm:
   - "1.9.3"
 before_install: 
   - sudo apt-get update
-  - sudo apt-get install -y xvfb chromium-browser iceweasel flashplugin-installer openjdk6 unzip
+  - sudo apt-get install -y wget xvfb chromium-browser iceweasel flashplugin-installer openjdk-6-jdk unzip
   - sudo wget http://chromedriver.googlecode.com/files/chromedriver_linux32_26.0.1383.0.zip 
   - sudo unzip chromedriver_linux32_26.0.1383.0.zip
   - sudo mv chromedriver /usr/local/bin/
