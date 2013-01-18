@@ -24,14 +24,16 @@ namespace :standalone do
   desc "Validate test w/ default opt is triggered and redir is showed"
   task :test_url => "Gemfile.lock" do
     class WptrbTest < Test::Unit::TestCase
-      include Rack::Tests::Methods
+      include Rack::Test::Methods
       def app
         WptrbWww
       end
       def testing_url_triggered
-        get '/test/'
+        get '/test/',:url => "www.github.com"
         assert last_response.ok?
-        assert last_response.assert_response(:redirect)
+        #puts last_response.body
+        assert last_response.body.include?('window.location')
+        assert last_response.body.include?('www.github.com')
       end
     end
   end
