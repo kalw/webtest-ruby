@@ -1,0 +1,12 @@
+
+rvm:
+  - 1.8.7 # (par défaut)
+before_install: 
+	- sudo apt-get update
+	- sudo apt-get install -y xvfb chromium-browser iceweasel flashplugin-nonfree openjdk6 unzip
+	#- sed -e 's/password/coincoin/' -e 's/0.0.0.0/127.0.0.1/' settings-sample.yml > settings.yml
+	#- sudo java -jar /tmp/airvideo.test.server.jar /tmp/test.properties > /dev/null & 	
+	- sudo wget http://chromedriver.googlecode.com/files/chromedriver_linux32_26.0.1383.0.zip 
+	- sudo unzip chromedriver_linux32_26.0.1383.0.zip
+	- sudo mv chromedriver /usr/local/bin/
+script: "bundle exec rake"
