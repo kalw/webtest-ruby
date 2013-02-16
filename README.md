@@ -11,16 +11,17 @@ Requirements :
 Mandatory:
 
 - xvfb
-- chromedriver
-- chrome
 - firefox
 - ruby 1.9 x
 
 Optional:
 
 - jdk 
+- chromedriver
+- chrome
 - nodejs
 - yslow helper https://github.com/marcelduran/yslow
+- chrome har helper https://github.com/cyrus-and/chrome-har-capturer
 - imagemagick
 
 
@@ -31,7 +32,8 @@ command line :
 
 standalone webview :
 
-- install all requierements
+- install all requierements 
+- bundle install
 
 
 Todo :
@@ -39,8 +41,9 @@ Todo :
  
 - interact with wpt
 - interact with slowhow
-- extract har from devtools in chrome internal checks
-- add onload and oncontent load from browser into har genrated from proxy
+- extract har from devtools in chrome internal 
+- add onload and oncontent load from browser into har generated from proxy
 - add more test unit
-- add travis
+- add travis - OK
 - clean up the code
+- extract har from chrome without node

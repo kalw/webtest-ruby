@@ -1,8 +1,7 @@
-:javascript
-	window.location="/display/?name=#{test.name}&www_url=#{test.url}&cycles=#{test.test_cycles}&yslow=yes"
-
-= if "#{debug}" == "yes" 
+- if "#{debug}" == "yes" 
 	%ul
 		- test.inspect.gsub(/[<>]/,"").split(",").each do |info|
 			%li  #{info}
-	
+- else
+	:javascript
+		window.location="/display/?name=#{test.name}&www_url=#{test.url}&cycles=#{test.test_cycles}&yslow=yes"
