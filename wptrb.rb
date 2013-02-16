@@ -12,6 +12,10 @@ require 'yaml'
 require 'logger'
 require 'trollop'
 require 'awesome_print'
+require 'em-http'
+require 'faye/websocket'
+require 'json'
+require 'webkit_remote'
 
 
 opts = Trollop::options do
@@ -82,7 +86,7 @@ class Wptrb
       }.merge(defaults)
       @options = defaults
       @logger = Logger.new(STDOUT)
-      pp "innt options : #{options.inspect}"
+      pp "Initialize options : #{options.inspect}"
     
     
     
@@ -113,7 +117,7 @@ class Wptrb
       @failsafe = options[:failsafe]
     end
     
-    @logger.info pp @chrome_settings.inspect
+    #@logger.info pp @chrome_settings.inspect
     
     if @debug_option 
       @logger.level = Logger::DEBUG 
@@ -121,6 +125,9 @@ class Wptrb
       @logger.level = Logger::ERROR
     end
     
+    unless site_url[/^http:\/\//] || site_url[/^https:\/\//]
+      site_url = 'http://' + site_url
+    end
     @url  = site_url
     @name = "#{Time.now.hash}"
     @name = "#{name}".gsub(/-/,"")
@@ -194,35 +201,11 @@ class Wptrb
   end
   
   def chrome_get_har(url)
-#    if har_type == "internal"
-#      require 'em-http'
-#      require 'faye/websocket'
-#      require 'json'
-#
-#      EM.run do
-#        # Chrome runs an HTTP handler listing available tabs
-#        conn = EM::HttpRequest.new('http://localhost:9222/json').get
-#        conn.callback do
-#          resp = JSON.parse(conn.response)
-#          logger.debug "#{resp.size} available tabs, Chrome response: \n#{resp}"
-#
-#          # connect to first tab via the WS debug URL
-#          ws = Faye::WebSocket::Client.new(resp.first['webSocketDebuggerUrl'])
-#          ws.onopen = lambda do |event|
-#            # once connected, enable network tracking
-#            ws.send JSON.dump({id: 1, method: 'Network.enable'})
-#
-#            # tell Chrome to navigate to twitter.com and look for "chrome" tweets
-#            ws.send JSON.dump({id: 2, method: 'Page.navigate', params: {url: '#{url}' + rand(100).to_s}})
-#          end
-#
-#          ws.onmessage = lambda do |event|
-#            # print event notifications from Chrome to the console
-#            logger.info [:new_message, JSON.parse(event.data)]
-#          end
-#        end
-#      end
-#    end
+    if har_type == "internal"
+
+
+
+    end
   end
 
 
@@ -245,7 +228,7 @@ class Wptrb
           @browser = Watir::Browser.new :chrome , :switches => chrome_settings
         end
         #	headless.start_capture
-        pp "test_url : har_type = #{har_type}"
+        pp "test_url : #{url} && har_type = #{har_type} && har_name = #{har_name["#{view_index}"]}"
         if har_type == "proxy"
           @browser.goto "#{url}"
           sleep 20 # some sites need more time to render even after onreadystate
@@ -253,10 +236,38 @@ class Wptrb
           #performance_timings = browser.execute_script("return window.performance.timing ;")
           #pp performance_timings.inspect
         else
-          chrome_get_har("#{url}")
+            %x(chrome-har-capturer --host 127.0.0.1 --port 9222 --output #{har_name["#{view_index}"]} #{url})
+            sleep 20 # some sites need more time to render even after onreadystate
+#         EM.run do
+#            # Chrome runs an HTTP handler listing available tabs
+#            conn = EM::HttpRequest.new('http://localhost:9222/json').get
+#            conn.callback do
+#              resp = JSON.parse(conn.response)
+#              puts "#{resp.size} available tabs, Chrome response: \n#{resp}"
+#
+#              # connect to first tab via the WS debug URL
+#              ws = Faye::WebSocket::Client.new(resp.first['webSocketDebuggerUrl'])
+#              ws.onopen = lambda do |event|
+#                # once connected, enable network tracking
+#                ws.send JSON.dump({id: 1, method: 'Network.enable'})
+#
+#                # tell Chrome to navigate to twitter.com and look for "chrome" tweets
+#                ws.send JSON.dump({
+#                  id: 1,
+#                  method: 'Page.navigate',
+#                  params: {url: "#{url}"}
+#                })
+#              end
+#
+#              ws.onmessage = lambda do |event|
+#                # print event notifications from Chrome to the console
+#                pp [:new_message, JSON.parse(event.data)]
+#              end
+#            end
+#          end
         end
         if !@headless.nil?
-      	  @headless.take_screenshot("#{results_path}#{name}.x11.jpg")
+      	  @headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
         end
         @browser.screenshot.save("#{png_wdr_name["#{view_index}"]}")
       end
@@ -296,7 +307,7 @@ class Wptrb
           }
         end
         if !@headless.nil?
-          @headless.take_screenshot("#{results_path}#{name}.x11.jpg")
+          @headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
         end
         @browser.screenshot.save("#{png_wdr_name["#{view_index}"]}")
       end
@@ -318,7 +329,7 @@ class Wptrb
         end
 
         if !@headless.nil?
-        	@headless.take_screenshot("#{results_path}#{name}.x11.jpg")
+        	@headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
         end
         @browser.save_screenshot("#{png_wdr_name["#{view_index}"]}")
       end
@@ -358,7 +369,7 @@ class Wptrb
           }
         end
         if !@headless.nil?
-        	@headless.take_screenshot("#{results_path}#{name}.x11.jpg")
+        	@headless.take_screenshot("#{png_x11_name["#{view_index}"]}") 
         end
         @browser.save_screenshot("#{png_wdr_name["#{view_index}"]}")
       end
@@ -420,8 +431,9 @@ class WptrbWww < Sinatra::Base
     end
       
     pp "Testing with : #{test.inspect}"
-    pp "har_type : #{test.har_type}"
-    pp "cycles : #{test.test_cycles}"
+    pp "Browser : #{test.browser_type}"
+    pp "Har_type : #{test.har_type}"
+    pp "Cycles : #{test.test_cycles}"
     Thread.abort_on_exception = true
     Thread.new do
       test.simulate_display
