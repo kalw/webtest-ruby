@@ -11,7 +11,11 @@
 		- png_path = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}#{view_cycle}*.png"
 		- png_path = Dir["#{png_path}"]
 		- png_path = png_path[0]
+		- png_path_wd = png_path[0]
+		- png_path_x11 = png_path[1]
 		- png_name = File.basename(png_path)
+		- png_name_wd = File.basename(png_name_wd)
+		- png_name_x11 = File.basename(png_name_x11)
 		- har_full_path_blob = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}#{view_cycle}.har"
 		- har_full_path = Dir["#{har_full_path_blob}"]
 		- har_full_path = har_full_path[0]
@@ -30,7 +34,8 @@
 			.span4{:style => "height: 300px !important; overflow: scroll;"}
 				%h2
 					SCREENSHOT
-				%img{:src => "/results/#{name}/#{png_name}"}
+				%img{:src => "/results/#{name}/#{png_name_wd}"}
+				%img{:src => "/results/#{name}/#{png_name_x11}"}
 		:javascript
 			(function() {
 			    var har = document.createElement("script");
