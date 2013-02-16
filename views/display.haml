@@ -12,15 +12,15 @@
 		- png_path = Dir["#{png_path}"]
 		- png_path = png_path[0]
 		- png_name = File.basename(png_path)
-		- har_full_path_blob = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}#{view_cycle}*.har"
+		- har_full_path_blob = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}#{view_cycle}.har"
 		- har_full_path = Dir["#{har_full_path_blob}"]
 		- har_full_path = har_full_path[0]
-		- har_name = File.basename(har_full_path)
+		- har_name = File.basename("#{har_full_path}")
 		.raw-fluid
 			- if "#{report_yslow}" == "yes" 
 				.span4{:style => "height: 300px !important; overflow: scroll;"}
 					%table.table.table-condensed
-						- yslow = %x(yslow -i grade -f plain -r ydefault -d #{har_full_path_blob})
+						- yslow = %x(yslow -i grade -f plain -r ydefault -d #{har_full_path})
 						- logger.info "#{yslow}"
 						%h2 
 							YSLOW 
