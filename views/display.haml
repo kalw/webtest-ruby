@@ -1,21 +1,19 @@
 %p
 - report_yslow = "#{yslow}"
-- png_path = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}*.png"
-- puts "cycles : "
-- puts cycles
-- puts "count : " 
-- puts Dir.glob("#{png_path}").count
+- png_path = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}*x11.png"
+
 - png_nb = Dir.glob("#{png_path}").count
 - if "#{png_nb}" == "#{cycles}"
 	- Dir.glob("#{png_path}").count.times do |view_cycle|
-		- png_path = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}#{view_cycle}*.png"
+		- png_path = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}#{view_cycle}*g"
 		- png_path = Dir["#{png_path}"]
-		- png_path = png_path[0]
+		
+		
 		- png_path_wd = png_path[0]
 		- png_path_x11 = png_path[1]
-		- png_name = File.basename(png_path)
-		- png_name_wd = File.basename(png_name_wd)
-		- png_name_x11 = File.basename(png_name_x11)
+		
+		- png_name_wd = File.basename(png_path_wd)
+		- png_name_x11 = File.basename(png_path_x11)
 		- har_full_path_blob = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}#{view_cycle}.har"
 		- har_full_path = Dir["#{har_full_path_blob}"]
 		- har_full_path = har_full_path[0]
@@ -30,7 +28,15 @@
 							YSLOW 
 						%pre 
 							- yslow.inspect.gsub('"',"").split(/\\n/).each do |info|
-								#{info}
+								#{info}<br>
+			.span4{:style => "height: 300px !important; overflow: scroll;"}
+				%table.table.table-condensed
+					- pagespeed = %x(#{settings.root}/lib/pagespeed/1.9/har_to_pagespeed_`uname -o`_`uname -m` text #{har_full_path} )
+					%h2
+						PAGESPEED
+					%pre
+						- pagespeed.inspect.gsub('"',"").split(/\\n/).each do |info|
+							#{info}<br>
 			.span4{:style => "height: 300px !important; overflow: scroll;"}
 				%h2
 					SCREENSHOT
@@ -47,7 +53,7 @@
 		.har{:id =>"har#{view_cycle}",:"data-har" => "/results/#{name}/#{har_name}", :validate => "false",:stats => "true",:height => "300"}
 	%p
 - else
-	%script{:type => "text/javascript", :src => "http://fgnass.github.com/spin.js/dist/spin.js"}
+	%script{:type => "text/javascript", :src => "/js/spin.js"}
 	:javascript
 		setTimeout(function(){
 		   window.location.reload(1);

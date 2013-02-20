@@ -5,17 +5,18 @@ require 'headless'
 require 'selenium/webdriver'
 require 'browsermob/proxy'
 require 'har'
-require 'pp'
-require 'yaml'
-require 'pp'
 require 'yaml'
 require 'logger'
 require 'trollop'
-require 'awesome_print'
 require 'em-http'
 require 'faye/websocket'
 require 'json'
 require 'webkit_remote'
+require 'sinatra/base'
+require "sinatra/reloader" 
+require 'sinatra/twitter-bootstrap'
+require 'haml'
+
 
 
 opts = Trollop::options do
@@ -85,7 +86,7 @@ class Wptrb
       :test_cycles => 1
       }.merge(defaults)
       @options = defaults
-      @logger = Logger.new(STDOUT)
+      #@logger = Logger.new(STDOUT)
       pp "Initialize options : #{options.inspect}"
     
     
@@ -94,7 +95,7 @@ class Wptrb
       @config = YAML::load(File.open(ENV["HOME"] + '/.wptrb/settings.yml'))
       log_file = File.open(config["debug_file"], 'a+')
       log_file.sync = true 
-      @logger = Logger.new(log_file)
+      #@logger = Logger.new(log_file)
       if defined?(config["results_path"]) ; @results_path = config["results_path"]  ; end
       if defined?(config["webdriver_type"]) ; @webdriver_type = config["webdriver_type"] ; end
       if defined?(config["browser_type"]) ; @browser_type = config["browser_type"] ; end
@@ -120,9 +121,9 @@ class Wptrb
     #@logger.info pp @chrome_settings.inspect
     
     if @debug_option 
-      @logger.level = Logger::DEBUG 
+      #@logger.level = Logger::DEBUG 
     else
-      @logger.level = Logger::ERROR
+      #@logger.level = Logger::ERROR
     end
     
     unless site_url[/^http:\/\//] || site_url[/^https:\/\//]
@@ -132,13 +133,13 @@ class Wptrb
     @name = "#{Time.now.hash}"
     @name = "#{name}".gsub(/-/,"")
     @results_path = "#{results_path}#{name}/"
-    @logger.debug "Name : #{name} | Result Path : #{results_path}"
+    #@logger.debug "Name : #{name} | Result Path : #{results_path}"
     
     @firefox_settings = Selenium::WebDriver::Firefox::Profile.new
     @firefox_settings.assume_untrusted_certificate_issuer=false
     
 
-    @firefox_settings["extensions.firebug.currentVersion"]    = "1.11.1" # avoid 'first run' tab
+    @firefox_settings["extensions.firebug.currentVersion"]    = "1.10.6" # avoid 'first run' tab
     @firefox_settings["extensions.firebug.previousPlacement"] = 1
     @firefox_settings["extensions.firebug.allPagesActivation"] = "on"
     @firefox_settings["extensions.firebug.onByDefault"]       = true
@@ -160,16 +161,17 @@ class Wptrb
   def simulate_display()
     if @display == ""
       @headless = Headless.new
+      
       @headless.start
       @display = @headless.display
-      @logger.debug "Xvfb started on : #{display}"		
+      #@logger.debug "Xvfb started on : #{display}"		
     else
     end
     @chrome_settings += %W[ --display=:#{display} ]
-    @logger.debug "display set : #{display}"
+    #@logger.debug "display set : #{display}"
     if @vnc_enabled
       system("x11vnc -display :#{display}.0 -ncache 10 &")
-      @logger.debug "x1vnc started"
+      #@logger.debug "x1vnc started"
     end
   end
 
@@ -189,14 +191,14 @@ class Wptrb
       #@firefox_settings['devtools.chrome.enabled'] = true
       if RUBY_PLATFORM.downcase.include?("darwin") && browser_type == "chrome"
         @interface_name = %x(networksetup -listnetworkserviceorder | grep -C1 en0 | head -n1  | awk '{print $2}')
-        @logger.debug "#{interface_name}"
+        #@logger.debug "#{interface_name}"
         @proxy_old_settings = %x(networksetup -getwebproxystate #{interface_name})
         proxy_set = `/usr/sbin/networksetup -setwebproxy #{interface_name} #{proxy_server.host} #{proxy_server.port}`
         proxy_activated = `networksetup -setwebproxystate #{interface_name} on`
         proxy_old_status = %W(`networksetup -getwebproxy #{interface_name}`)
-        @logger.debug "#{proxy_old_status}"
+        #@logger.debug "#{proxy_old_status}"
       end
-      @logger.debug "proxy set : #{proxy_server.host} #{proxy_server.port}"
+      #@logger.debug "proxy set : #{proxy_server.host} #{proxy_server.port}"
     end
   end
   
@@ -219,13 +221,17 @@ class Wptrb
       @png_x11_name={}
       @har_name={}
       @png_wdr_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.webdriver.png"
-      @png_x11_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.x11.jpg"
+      @png_x11_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.x11.png"
       @har_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.har"
       # browser_type == "chrome" && webdriver_type == "watir"
       if browser == "chrome" && webdriver == "watir"
-        logger.debug "chrome settings set : #{pp chrome_settings}"
+        #@logger.debug "chrome settings set : #{pp chrome_settings}"
         if view_index == 0
           @browser = Watir::Browser.new :chrome , :switches => chrome_settings
+          screen_width = @browser.execute_script("return screen.width;")
+          screen_height = @browser.execute_script("return screen.height;")
+          @browser.driver.manage.window.resize_to(screen_width,screen_height)
+          @browser.driver.manage.window.move_to(0,0)
         end
         #	headless.start_capture
         pp "test_url : #{url} && har_type = #{har_type} && har_name = #{har_name["#{view_index}"]}"
@@ -277,13 +283,17 @@ class Wptrb
         if har_type == "proxy"
           # 
         else
-          @firefox_settings.add_extension "lib/firefox/addons/firebug-1.11.0b3.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/firebug-1.10.6.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b3.xpi"
         end
         if view_index == 0
           driver = Selenium::WebDriver.for :firefox, :profile => firefox_settings
           @browser = Watir::Browser.new(driver)
+          screen_width = @browser.execute_script("return screen.width;")
+          screen_height = @browser.execute_script("return screen.height;")
+          @browser.driver.manage.window.resize_to(screen_width,screen_height)
+          @browser.driver.manage.window.move_to(0,0)
         end
         #	headless.start_capture
         if har_type == "proxy"
@@ -295,7 +305,7 @@ class Wptrb
         else
           sleep 5 # wait for plugins to load correctly
           @browser.goto "#{url}"
-          Timeout::timeout(60) {
+          Timeout::timeout(300) {
             while (true) do
               if !Dir.glob(Dir["#{File.expand_path(File.dirname(__FILE__))}/public/results/#{name}/*.har"].grep(/\+/)).empty?
                 file_name = Dir.glob(Dir["#{File.expand_path(File.dirname(__FILE__))}/public/results/#{name}/*.har"].grep(/\+/))
@@ -316,6 +326,10 @@ class Wptrb
       if browser == "chrome" && webdriver == "selenium"
         if view_index == 0
           @browser = Selenium::WebDriver.for :chrome ,  :switches => chrome_settings
+          screen_width = @browser.execute_script("return screen.width;")
+          screen_height = @browser.execute_script("return screen.height;")
+          @browser.driver.manage.window.resize_to(screen_width,screen_height)
+          @browser.driver.manage.window.move_to(0,0)
         end
         #	headless.start_capture
         if har_type == "proxy"
@@ -344,7 +358,11 @@ class Wptrb
           @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b3.xpi"
         end
         if view_index == 0
-          @browser = Selenium::WebDriver.for :firefox , :profile => firefox_settings 
+          @browser = Selenium::WebDriver.for :firefox , :profile => firefox_settings
+          screen_width = @browser.execute_script("return screen.width;")
+          screen_height = @browser.execute_script("return screen.height;")
+          @browser.driver.manage.window.resize_to(screen_width,screen_height)
+          @browser.driver.manage.window.move_to(0,0)
         end
         #	headless.start_capture
         if har_type == "proxy"
@@ -382,10 +400,11 @@ class Wptrb
  
       end
     end
+    @browser.close
     if !@headless.nil?
       @headless.destroy
     end
-    @browser.quit
+    
     if @har_type == "proxy"
       @brawsermob_proxy.stop
       if RUBY_PLATFORM.downcase.include?("darwin") && browser_type == "chrome"
@@ -397,24 +416,27 @@ class Wptrb
 end
 
 
-require 'sinatra/base'
-require "sinatra/reloader" 
-require 'sinatra/twitter-bootstrap'
-require 'haml'  
+ 
 
 class WptrbWww < Sinatra::Base
-  register Sinatra::Twitter::Bootstrap::Assets
-  register Sinatra::Reloader
-  #enable :inline_templates
-  #set :session_secret, ENV["SESSION_KEY"] || 'too secret'
-  #enable :sessions
-    
-  #use Rack::Session::Pool, :expire_after => 2592000,:key => 'my_app_key',
-  #  :path => '/',:secret => 'coincoin'
-  helpers do
-    #include Rack::Utils
+  configure do
+    #set :my_config_property, 'hello world'
+    set :app_file, __FILE__
+    set :root, File.dirname(__FILE__)
+    set :bind, '0.0.0.0'
+    set :port, 4567
+    set :run, false
+    set :logging, false
+    register Sinatra::Reloader
+    register Sinatra::Twitter::Bootstrap::Assets
+    enable :reloader
   end
+  #enable :inline_templates
+  #enable :sessions
+  #set :session_secret, ENV["SESSION_KEY"] || 'too secret'
+  
   get '/' do
+    #haml:index,:locals =>{:coincoin => "#{settings.my_config_property}"}
     haml:index
   end
     
@@ -441,7 +463,6 @@ class WptrbWww < Sinatra::Base
         test.proxy("lib/browsermob-proxy/2.0-beta-6/bin/browsermob-proxy")
       end
       test.test_url("#{test.browser_type}","#{test.webdriver_type}")
-      test.browser.quit
     end
   	haml:test,:locals => {
       :test => test,
@@ -468,12 +489,19 @@ class WptrbWww < Sinatra::Base
       :cycles => cycles
     }
   end
+  
+  
+  
 end
- 
- 
-if opts[:www]
-   WptrbWww.run!
+
+if [:www]
+  WptrbWww.run! do |server|
+    server.config[:AccessLog] = []
+    server.config[:Logger] = WEBrick::Log::new("/dev/null")
+  end
 end
+
+
 
 
 
