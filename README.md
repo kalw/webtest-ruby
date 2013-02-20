@@ -22,7 +22,8 @@ Optional:
 - nodejs
 - yslow helper https://github.com/marcelduran/yslow
 - chrome har helper https://github.com/cyrus-and/chrome-har-capturer
-- imagemagick
+- imagemagick 
+- ffmpeg 
 
 
 Usage :
@@ -34,6 +35,8 @@ standalone webview :
 
 - install all requierements 
 - bundle install
+- ruby wptrb.rb -w
+- launch http://localhost:4567
 
 
 Todo :
@@ -41,9 +44,13 @@ Todo :
  
 - interact with wpt
 - interact with slowhow
-- extract har from devtools in chrome internal 
-- add onload and oncontent load from browser into har generated from proxy
+- extract har from devtools in chrome internal mode - OK w/chrome-har-capturer
+- add onload and oncontent load from browser into har generated from proxy mode
 - add more test unit
 - add travis - OK
 - clean up the code
 - extract har from chrome without node
+- enable yslow detection in order to handle execption correctly
+- enable chrome-har-capturer detection in order to handle execption correctly
+- enable imagemagick detection in order to handle execption correctly
+- enable ffmpeg detection in order to handle execption correctly
