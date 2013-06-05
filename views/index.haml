@@ -1,30 +1,46 @@
 %p
-.span12.hero-unit
-	%form.span12.form-horizontal{:action => "/test/", :method => "GET"}
+.span11.hero-unit
+	%form.form{:action => "/test/", :method => "GET"}
 		.row-fluid
 			.span3
 				%h1 wtrb 
-			.span9
+			.span6
 				%p "Inspect websites and harden them..."
 				.input-append
 					%input.input-block-level{:type => "text",:placeholder => "url",:name => "url" }
 					%button.btn.btn-primary{:type => "submit"}
 						%i.icon-off.icon-white
 						\=
-				%a{:"data-toggle" => "collapse", :"data-target" => "#demo"}
-					.test
-						%i.icon-wrench 
-						advanced options
-				#demo.collapse
-					%select.span2{:name => "b"}
-						%option{:value => "firefox"} firefox
-						%option{:value => "chrome"} chrome
-					%select.span2{:name => "w"}
-						%option{:value => "watir"} watir
-						%option{:value => "selenium"} selenium
-					%select.span2{:name => "h"}
-						%option{:value => "internal"} internal
-						%option{:value => "proxy"} proxy
-					%input{:type => "checkbox", :value => "2", :name => "c"} cache 
-				
+				.raw-fluid
+					.span10
+						%a{:"data-toggle" => "collapse", :"data-target" => "#demo"}
+							.test
+								%i.icon-wrench 
+								advanced options
+						%p							
+						#demo.collapse.raw-fluid
+							%fieldset.span10.offset1
+								%select{:name => "b"}
+									%option{:value => "firefox"}
+										firefox
+									%option{:value => "chrome"}
+										chrome
+								%select{:name => "w"}
+									%option{:value => "watir"}
+										watir
+									%option{:value => "selenium"} 
+										selenium
+								%select{:name => "h"}
+									%option{:value => "internal"}
+										internal
+									%option{:value => "proxy"}
+										proxy
+								%label.checkbox
+									%input{:type => "checkbox", :value => "2", :name => "c"}
+										cache
+								%label.checkbox
+									- if config[:secscan]
+										%input{:type => "checkbox", :value => "true", :name => "s"}
+											security check
+			.span3
 						
