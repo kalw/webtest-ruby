@@ -18,40 +18,115 @@
 		- har_full_path = Dir["#{har_full_path_blob}"]
 		- har_full_path = har_full_path[0]
 		- har_name = File.basename("#{har_full_path}")
+		- yslow_xpi_full_path_blob = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}#{view_cycle}.yslow.json"
+		- yslow_xpi_full_path = Dir["#{yslow_xpi_full_path_blob}"]
+		- yslow_xpi_full_path = yslow_xpi_full_path[0]
+		- yslow_xpi_name = File.basename("#{yslow_xpi_full_path}")
+		- yslow_xpi_total_score = 0
+		- pagespeed_xpi_full_path_blob = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}#{view_cycle}.pagespeed.json"
+		- pagespeed_xpi_full_path = Dir["#{pagespeed_xpi_full_path_blob}"]
+		- pagespeed_xpi_full_path = pagespeed_xpi_full_path[0]
+		- pagespeed_xpi_name = File.basename("#{pagespeed_xpi_full_path}")
+		- pagespeed_xpi_total_score = 0
+		- mp4_full_path_blob = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}#{view_cycle}.webm"
+		- mp4_full_path = Dir["#{mp4_full_path_blob}"]
+		- mp4_full_path = mp4_full_path[0]
+		- mp4_name = File.basename("#{mp4_full_path}")
 		.raw-fluid
 			- if "#{report_yslow}" == "yes" 
-				.span4{:style => "height: 300px !important; overflow: scroll;"}
+				.span4{:style => "height: 200px !important; overflow: scroll;"}
 					%table.table.table-condensed
-						- yslow = %x(yslow -i grade -f plain -r ydefault -d #{har_full_path})
-						- logger.info "#{yslow}"
-						%h2 
+						- yslow_xpi = JSON.parse( IO.read(yslow_xpi_full_path).gsub('=>',':') )
+						%h3 
 							YSLOW 
 						%pre 
-							- yslow.inspect.gsub('"',"").split(/\\n/).each do |info|
-								#{info}<br>
-			.span4{:style => "height: 300px !important; overflow: scroll;"}
+							Overall score : #{yslow_xpi["o"]} <br>
+							- yslow_xpi["g"].each do |key,str| 
+								#{key} : #{str["score"]}
+								- if str["message"].to_s != ""
+									<pre>#{str["message"]} </pre>
+			.span4{:style => "height: 200px !important; overflow: scroll;"}
 				%table.table.table-condensed
-					- pagespeed = %x(#{settings.root}/lib/pagespeed/1.9/har_to_pagespeed_`uname -o`_`uname -m` text #{har_full_path} )
-					%h2
+					- pagespeed_xpi = JSON.parse( IO.read(pagespeed_xpi_full_path).gsub('=>',':') )
+					%h3
 						PAGESPEED
 					%pre
-						- pagespeed.inspect.gsub('"',"").split(/\\n/).each do |info|
-							#{info}<br>
-			.span4{:style => "height: 300px !important; overflow: scroll;"}
-				%h2
+						Overall score : #{pagespeed_xpi["pageStats"]["overallScore"]} <br>
+						- pagespeed_xpi["rules"].each do |key,str| 
+							#{key["name"]} : #{key["score"]} 
+							- if key["warnings"].to_s != ""
+								<pre> #{key["warnings"]}</pre>
+			.span4{:style => "height: 200px !important; overflow: scroll;"}
+				%h3
 					SCREENSHOT
 				%img{:src => "/results/#{name}/#{png_name_wd}"}
 				%img{:src => "/results/#{name}/#{png_name_x11}"}
-		:javascript
-			(function() {
-			    var har = document.createElement("script");
-			    har.src = "/har.js";
-			    har.setAttribute("id", "har");
-			    har.setAttribute("async", "true");
-			    document.documentElement.firstChild.appendChild(har);
-			})();
-		.har{:id =>"har#{view_cycle}",:"data-har" => "/results/#{name}/#{har_name}", :validate => "false",:stats => "true",:height => "300"}
-	%p
+		.raw-fluid		
+			.span3
+				%h3
+					VIDEO
+					%video{:width => "320", :height => "210", :controls => true}
+						%source{:src => "/results/#{name}/#{mp4_name}", :type => 'video/webm'}
+			.span9{:height => "210"}
+				%h3
+					HAR
+				:javascript
+					(function() {
+					    var har = document.createElement("script");
+					    har.src = "/har.js";
+					    har.setAttribute("id", "har");
+					    har.setAttribute("async", "true");
+					    document.documentElement.firstChild.appendChild(har);
+					})();
+				.har{:id =>"har#{view_cycle}",:"data-har" => "/results/#{name}/#{har_name}", :validate => "false",:stats => "true",:height => "200"}
+			.span11		
+				- if File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}.afr"
+					%h3 Security Check
+					- secscan_file = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}.afr" rescue secscan_file = ""
+					- if  Dir.glob(secscan_file).count != 0
+						- auditstore = Arachni::AuditStore.load(secscan_file)
+						- if auditstore.issues.count != 0
+							%table.hidden-phone.table.table-striped.table-hover.table-condensed.fixed
+								%thead
+									%tr
+										%th{:style => "width: 23%"}
+											Name
+										%th{:style => "width: 26%"}
+											URL
+										%th{:style => "width: 10%"}
+											Element
+										%th{:style =>"width: 15%"}
+											Input
+										%th{:style => "width: 11%"}
+											Severity
+										%th
+											References
+											%a{:href => "#", :rel => "tooltip", :title => "Vulnerability definitions from Common Weakness Enumeration project."}
+												%i.icon-info-sign
+								- auditstore.issues.each do |issue|
+									%tr{:onclick => "$('#description-#{issue.digest}').collapse( 'toggle' );"}
+										%td
+											#{issue.name}
+										%td.wrap
+											#{issue.url}
+										%td
+											#{issue.elem} 
+										%td.wrap
+											#{issue.mod_name} 
+										%td
+											%p.label.issue.severity
+												#{issue.severity}
+										%td
+											- issue.references.each do |key,url|
+												%a{:href => "#{url}"}#{url}
+											- if issue.cwe_url
+												%a{:href => "#{issue.cwe_url}"}
+													CWE#{issue.cwe}
+									%tr.description
+										%td.description{:colspan => "7"}
+											.description-container.collapse{:id =>"description-#{issue.digest}"}
+												%blockquote
+													#{issue.description}
 - else
 	%script{:type => "text/javascript", :src => "/js/spin.js"}
 	:javascript
