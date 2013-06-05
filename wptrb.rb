@@ -1,6 +1,6 @@
 require 'rubygems' if RUBY_VERSION < '1.9' 
 require 'watir-webdriver'
-require 'watir-webdriver-performance'
+#require 'watir-webdriver-performance'
 require 'headless'
 require 'selenium/webdriver'
 require 'browsermob/proxy'
