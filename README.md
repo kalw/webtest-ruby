@@ -16,7 +16,7 @@ Mandatory:
 
 Optional:
 
-- jdk 
+- jdk6
 - chromedriver
 - chrome
 - nodejs
@@ -42,15 +42,17 @@ standalone webview :
 Todo :
 ============
  
-- interact with wpt
+- interact with wpt - HALF ; get job handled
 - interact with slowhow
 - extract har from devtools in chrome internal mode - OK w/chrome-har-capturer
 - add onload and oncontent load from browser into har generated from proxy mode
 - add more test unit
 - add travis - OK
 - clean up the code
-- extract har from chrome without node
+- find more accurate/flexible pagespeed and yslow usage - ALMOST ; using beaconing feat from browser plugins	
+- extract har from chrome without node - HALF beaconing from plugin should be ok
 - enable yslow detection in order to handle execption correctly
 - enable chrome-har-capturer detection in order to handle execption correctly
 - enable imagemagick detection in order to handle execption correctly
 - enable ffmpeg detection in order to handle execption correctly
+- handle self signed ssl certificates
