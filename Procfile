@@ -1,1 +1,1 @@
-web: bundle exec ruby wptrb.rb -w -s
+web: bundle exec ruby ./wptrb.rb -w -s
