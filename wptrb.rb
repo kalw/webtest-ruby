@@ -221,7 +221,7 @@ class Wptrb
     @secscan.opts.audit_links = true        
     @secscan.opts.audit_forms = true
     @secscan.opts.audit_cookies = true
-    @secscan.opts.link_count_limit = 1
+    @secscan.opts.link_count_limit = 10
     @secscan.modules.load(['xss*', 'interesting_responses*'])
     @secscan.run
     p "secscan ended"
@@ -231,10 +231,13 @@ class Wptrb
   end
 
   def test_url(browser,webdriver)
+    # if requested test directory exists ; nogo
     if !FileTest::directory?("#{results_path}")
       Dir::mkdir("#{results_path}")
+    else
+      return
     end
-    
+        
     @test_cycles.to_i.times do |view_index|
       @png_wdr_name={}
       @png_x11_name={}
@@ -502,17 +505,21 @@ class WptrbWww < Sinatra::Base
   get '/' do
     #haml:index,:locals =>{:coincoin => "#{settings.my_config_property}"}
     haml:index,:locals => {
-      :config => $opts
+      :cmd_config => $opts,
+      :id => "#{Time.now.hash}"
     }
   end
     
   get '/test/' do
     pp "test page params : #{params.inspect}"
-    test = Wptrb.new(params[:url])
+    defined?(params[:id]) ? id = params[:id] : id = "#{Time.now.hash}"
+    pp id
+    test = Wptrb.new(params[:url],{:id => id })
     if defined?(params[:b]) ; test.browser_type     = params[:b] ; end
     if defined?(params[:w]) ; test.webdriver_type   = params[:w] ; end
     if defined?(params[:h]) ; test.har_type         = params[:h] ; end
     if defined?(params[:s]) ; test.options[:secscan]  = params[:s] ; end
+     
     if params[:c] == "2"
        test.test_cycles = "2"
     else
@@ -524,23 +531,41 @@ class WptrbWww < Sinatra::Base
     pp "Har_type : #{test.har_type}"
     pp "Cycles : #{test.test_cycles}"
     Thread.abort_on_exception = true
-    Thread.new do
+    test_proc = Thread.new do
       test.simulate_display
       if test.har_type == "proxy"
         test.proxy("lib/browsermob-proxy/2.0-beta-6/bin/browsermob-proxy")
       end
       test.test_url("#{test.browser_type}","#{test.webdriver_type}")
     end
-  	haml:test,:locals => {
-      :test => test,
+  	haml:display,:locals => {
+      :name => test.name,
+      :host => request.env["SERVER_NAME"],
+      :port => request.port,
+      :test_proc => test_proc,
+      :yslow => params[:yslow],
       :debug => params[:debug],
+      :www_url => test.url,
       :www_proxy => test.har_type,
       :www_webdriver => test.webdriver_type,
       :www_browser => test.browser_type,
       :www_url => test.url,
       :cycles => test.test_cycles
+      
     }
   end
+  
+#  get '/display/' do
+#    haml:display,:locals => {
+#      :name => params[:name],
+#      :host => request.env["SERVER_NAME"],
+#      :port => request.port,
+#      :yslow => params[:yslow],
+#      :www_url => params[:www_url],
+#      :cycles => params[:cycles],
+#      :secscan => params[:secscan]
+#    }
+#  end
     
   get '/har/' do
     erb:har
@@ -580,18 +605,6 @@ class WptrbWww < Sinatra::Base
     File.open( File.expand_path(File.dirname(__FILE__)) + "/public/results/#{name}/#{name}#{view}.pagespeed.json", "w") do |f| 
       f.write params[:content]
     end 
-  end
-  
-  get '/display/' do
-    haml:display,:locals => {
-      :name => params[:name],
-      :host => request.env["SERVER_NAME"],
-      :port => request.port,
-      :yslow => params[:yslow],
-      :www_url => params[:www_url],
-      :cycles => params[:cycles],
-      :secscan => params[:secscan]
-    }
   end
 
 end
