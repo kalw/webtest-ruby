@@ -1,7 +1,6 @@
 %p
 - report_yslow = "#{yslow}"
 - png_path = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}*x11.png"
-
 - png_nb = Dir.glob("#{png_path}").count
 - if "#{png_nb}" == "#{cycles}"
 	- Dir.glob("#{png_path}").count.times do |view_cycle|
@@ -33,29 +32,30 @@
 		- mp4_full_path = mp4_full_path[0]
 		- mp4_name = File.basename("#{mp4_full_path}")
 		.raw-fluid
-			- if "#{report_yslow}" == "yes" 
-				.span4{:style => "height: 200px !important; overflow: scroll;"}
-					%table.table.table-condensed
-						- yslow_xpi = JSON.parse( IO.read(yslow_xpi_full_path).gsub('=>',':') )
-						%h3 
-							YSLOW 
-						%pre 
-							Overall score : #{yslow_xpi["o"]} <br>
-							- yslow_xpi["g"].each do |key,str| 
-								#{key} : #{str["score"]}
-								- if str["message"].to_s != ""
-									<pre>#{str["message"]} </pre>
+			.span4{:style => "height: 200px !important; overflow: scroll;"}
+				%table.table.table-condensed
+					- yslow_xpi = JSON.parse( IO.read(yslow_xpi_full_path).gsub('=>',':') )
+					%h3 
+						YSLOW 
+						- if "#{yslow_xpi_name}" != "" 
+							%pre 
+								Overall score : #{yslow_xpi["o"]} <br>
+								- yslow_xpi["g"].each do |key,str| 
+									#{key} : #{str["score"]}
+									- if str["message"].to_s != ""
+										<pre>#{str["message"]} </pre>
 			.span4{:style => "height: 200px !important; overflow: scroll;"}
 				%table.table.table-condensed
 					- pagespeed_xpi = JSON.parse( IO.read(pagespeed_xpi_full_path).gsub('=>',':') )
 					%h3
 						PAGESPEED
-					%pre
-						Overall score : #{pagespeed_xpi["pageStats"]["overallScore"]} <br>
-						- pagespeed_xpi["rules"].each do |key,str| 
-							#{key["name"]} : #{key["score"]} 
-							- if key["warnings"].to_s != ""
-								<pre> #{key["warnings"]}</pre>
+						- if "#{pagespeed_xpi_name}" != "" 
+							%pre
+								Overall score : #{pagespeed_xpi["pageStats"]["overallScore"]} <br>
+								- pagespeed_xpi["rules"].each do |key,str| 
+									#{key["name"]} : #{key["score"]} 
+									- if key["warnings"].to_s != ""
+										<pre> #{key["warnings"]}</pre>
 			.span4{:style => "height: 200px !important; overflow: scroll;"}
 				%h3
 					SCREENSHOT
@@ -79,27 +79,28 @@
 					    document.documentElement.firstChild.appendChild(har);
 					})();
 				.har{:id =>"har#{view_cycle}",:"data-har" => "/results/#{name}/#{har_name}", :validate => "false",:stats => "true",:height => "200"}
-			.span11		
+		.raw-fluid
+			.span12
 				- if File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}.afr"
 					%h3 Security Check
 					- secscan_file = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}.afr" rescue secscan_file = ""
 					- if  Dir.glob(secscan_file).count != 0
 						- auditstore = Arachni::AuditStore.load(secscan_file)
 						- if auditstore.issues.count != 0
-							%table.hidden-phone.table.table-striped.table-hover.table-condensed.fixed
+							%table.hidden-phone.table.table-striped.table-hover.table-condensed.fixed{:style => "table-layout: fixed;word-wrap: break-word;"}
 								%thead
 									%tr
 										%th{:style => "width: 23%"}
 											Name
 										%th{:style => "width: 26%"}
 											URL
-										%th{:style => "width: 10%"}
+										%th{:style => "width: 25%"}
 											Element
 										%th{:style =>"width: 15%"}
 											Input
 										%th{:style => "width: 11%"}
 											Severity
-										%th
+										%th{:style => "width: 15%"}
 											References
 											%a{:href => "#", :rel => "tooltip", :title => "Vulnerability definitions from Common Weakness Enumeration project."}
 												%i.icon-info-sign
@@ -107,10 +108,11 @@
 									%tr{:onclick => "$('#description-#{issue.digest}').collapse( 'toggle' );"}
 										%td
 											#{issue.name}
-										%td.wrap
+										%td{:style => "overflow: hidden; white-space: nowrap; text-overflow: ellipsis; "}
+											%i.icon-info-sign{:rel => "tooltip", :title => "#{issue.url}"}
 											#{issue.url}
 										%td
-											#{issue.elem} 
+											#{issue.elem}  #{issue.var}
 										%td.wrap
 											#{issue.mod_name} 
 										%td
@@ -118,7 +120,7 @@
 												#{issue.severity}
 										%td
 											- issue.references.each do |key,url|
-												%a{:href => "#{url}"}#{url}
+												%a{:href => "#{url}"}#{url} 
 											- if issue.cwe_url
 												%a{:href => "#{issue.cwe_url}"}
 													CWE#{issue.cwe}
@@ -127,6 +129,8 @@
 											.description-container.collapse{:id =>"description-#{issue.digest}"}
 												%blockquote
 													#{issue.description}
+						- else
+							No issues found.
 - else
 	%script{:type => "text/javascript", :src => "/js/spin.js"}
 	:javascript
