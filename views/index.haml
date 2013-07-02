@@ -39,8 +39,9 @@
 									%input{:type => "checkbox", :value => "2", :name => "c"}
 										cache
 								%label.checkbox
-									- if config[:secscan]
+									- if cmd_config[:secscan]
 										%input{:type => "checkbox", :value => "true", :name => "s"}
 											security check
+								%input{:type => "hidden" , :value => "#{id}" , :name => "id"}
 			.span3
 						
