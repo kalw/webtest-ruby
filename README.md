@@ -55,4 +55,10 @@ Todo :
 - enable chrome-har-capturer detection in order to handle execption correctly
 - enable imagemagick detection in order to handle execption correctly
 - enable ffmpeg detection in order to handle execption correctly
-- handle self signed ssl certificates
+- handle self signed ssl certificates - OK remember_certificate_exception-1.0.0-fx.xpi seems to do the trick
+
+
+Bugs:
+============
+
+- combining secscan and w/cache mode show issues twice =)
