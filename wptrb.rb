@@ -250,7 +250,7 @@ class Wptrb
       
       @firefox_settings["setAcceptUntrustedCertificates"] = true
       @firefox_settings["app.update.enabled"] = false
-      @firefox_settings["extensions.firebug.currentVersion"]    = "1.12.0a5" # avoid 'first run' tab
+      @firefox_settings["extensions.firebug.currentVersion"]    = "1.12.0" # avoid 'first run' tab
       @firefox_settings["extensions.firebug.previousPlacement"] = 3
       @firefox_settings["extensions.firebug.allPagesActivation"] = "on"
       @firefox_settings["extensions.firebug.onByDefault"]       = true
@@ -342,7 +342,7 @@ class Wptrb
         if har_type == "proxy"
           # 
         else
-          @firefox_settings.add_extension "lib/firefox/addons/firebug-1.12.0a5.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/firebug-1.12.0.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b3.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/page-speed.xpi"
@@ -482,6 +482,19 @@ class Wptrb
     end
   end
 
+end
+
+
+module Sinatra
+  module Sample
+    module Helpers
+      
+      def check_exist(file)
+        p test
+      end
+
+    end
+  end
 end
 
 
