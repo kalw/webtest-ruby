@@ -12,18 +12,21 @@ Mandatory:
 
 - xvfb
 - firefox
-- ruby 1.9 x
+- ruby 1.9.x
 
-Optional:
+Optional scope:
 
 - jdk6
 - chromedriver
 - chrome
+- imagemagick 
+- ffmpeg 
+- VLC
+
 - nodejs
 - yslow helper https://github.com/marcelduran/yslow
 - chrome har helper https://github.com/cyrus-and/chrome-har-capturer
-- imagemagick 
-- ffmpeg 
+- pagespeed_sdk (1.9 used for now)
 
 
 Usage :
@@ -46,19 +49,23 @@ Todo :
 - interact with slowhow
 - extract har from devtools in chrome internal mode - OK w/chrome-har-capturer
 - add onload and oncontent load from browser into har generated from proxy mode
-- add more test unit
 - add travis - OK
+- add more test unit
 - clean up the code
 - find more accurate/flexible pagespeed and yslow usage - ALMOST ; using beaconing feat from browser plugins	
 - extract har from chrome without node - HALF beaconing from plugin should be ok
+	after all, we might need pagespeed chrome_har_capturer in order to interact w/WPT
 - enable yslow detection in order to handle execption correctly
 - enable chrome-har-capturer detection in order to handle execption correctly
 - enable imagemagick detection in order to handle execption correctly
-- enable ffmpeg detection in order to handle execption correctly
+- enable ffmpeg/vlc detection in order to handle execption correctly
 - handle self signed ssl certificates - OK remember_certificate_exception-1.0.0-fx.xpi seems to do the trick
+- make compatible crosstable making relation w/ firefox/chrome and plugins versions
+- detect correct execution of every steps and make related behavior
+- handle a trigger regarding video function (Y/N)
 
 
-Bugs:
+Bugs & Enhancements:
 ============
 
 - combining secscan and w/cache mode show issues twice =)
