@@ -1,4 +1,5 @@
 require 'rubygems' if RUBY_VERSION < '1.9' 
+require 'bundler/setup'
 require 'watir-webdriver'
 #require 'watir-webdriver-performance'
 require 'headless'
@@ -17,11 +18,12 @@ require "sinatra/reloader"
 require 'sinatra/twitter-bootstrap'
 require 'haml'
 require 'arachni'
-require 'arachni/ui/cli/output'
+#require 'arachni/ui/cli/output'
 #require 'fakeredis'
 #require 'resque'
 
 
+require_relative 'postresults'
 
 
 $opts = Trollop::options do
@@ -53,6 +55,7 @@ $opts = Trollop::options do
   opt :cycles, "cycles numbers , i.e. wo/cache then w/cache ", :type => Integer
   opt :failsafe, "wait for 20 sec after onready state in order to catch some RIA long loading sites"
   opt :secscan, "run a small security scan afterperformance testing."
+  opt :results, "Process .har and pagespeed files to IEWPG.txt and IEWRT.txt"
         
 end
 #Trollop::die :file, "must exist" unless File.exist?(opts[:file]) if opts[:file]
@@ -243,14 +246,14 @@ class Wptrb
       @png_x11_name={}
       @har_name={}
       @movie_name={}
-      @png_wdr_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.webdriver.png"
+      @png_wdr_name["#{view_index}"] = "#{results_path}#{name}#{view_index}_screen.png"
       @png_x11_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.x11.png"
       @har_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.har"
       @movie_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.webm"
       
       @firefox_settings["setAcceptUntrustedCertificates"] = true
       @firefox_settings["app.update.enabled"] = false
-      @firefox_settings["extensions.firebug.currentVersion"]    = "1.12.0" # avoid 'first run' tab
+      @firefox_settings["extensions.firebug.currentVersion"]    = "2.0.1" # avoid 'first run' tab
       @firefox_settings["extensions.firebug.previousPlacement"] = 3
       @firefox_settings["extensions.firebug.allPagesActivation"] = "on"
       @firefox_settings["extensions.firebug.onByDefault"]       = true
@@ -342,11 +345,11 @@ class Wptrb
         if har_type == "proxy"
           # 
         else
-          @firefox_settings.add_extension "lib/firefox/addons/firebug-1.12.0.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/firebug-2.0.1.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
-          @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b3.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b6.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/page-speed.xpi"
-          @firefox_settings.add_extension "lib/firefox/addons/yslow-3.1.4-fx.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/yslow-3.1.8-fx.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/remember_certificate_exception-1.0.0-fx.xpi"
         end
         if view_index == 0
@@ -359,6 +362,7 @@ class Wptrb
         end
         #	headless.start_capture
         if har_type == "proxy"
+          p cest le proxy
           @browser.goto "#{url}"
           sleep 20 # some sites need more time to render even after onreadystate
           # need to calculate onload and on onContentLoad for har injection later
@@ -368,7 +372,9 @@ class Wptrb
           sleep 5 # wait for plugins to load correctly
           @vlc_pid = spawn('' + @vlc_bin + ' -I dummy screen:// --screen-fps=10 --sout "#transcode{scale=1, deinterlace, vcodec=VP80, vb=1500}:standard{access=file,dst='+ @movie_name["#{view_index}"] +'}"')
           @browser.goto "#{url}"
-          Timeout::timeout(300) {
+
+          # creation of har file
+          Timeout::timeout(3) {
             while (true) do
               if !Dir.glob(Dir["#{File.expand_path(File.dirname(__FILE__))}/public/results/#{name}/*.har"].grep(/\+/)).empty?
                 export_name = Dir.glob(Dir["#{File.expand_path(File.dirname(__FILE__))}/public/results/#{name}/*.har"].grep(/\+/))
@@ -379,13 +385,17 @@ class Wptrb
               end
               sleep 0.5
             end
+          pp "har created and saved"
           }
         end
-        if !@headless.nil?
-          @headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
-        end
+        #if !@headless.nil?
+        #  @headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
+        #  p "headless screenshot"
+        #end
+        p "before browser screenshot"
         @browser.screenshot.save("#{png_wdr_name["#{view_index}"]}")
         Process.kill("QUIT",@vlc_pid)
+        pp "test_url end"
       end
 
       # browser_type == "chrome" && webdriver_type == "selenium"
@@ -622,6 +632,11 @@ class WptrbWww < Sinatra::Base
 
 end
 
+if $opts[:results]
+  toto = Results.new("results.har")
+  toto.process
+end
+
 if $opts[:url]
   sinatra_process = Process.pid
   Thread.new do 
@@ -652,8 +667,7 @@ if $opts[:www]
 end
 
 if $opts[:wptserver]
-  #p "wptserver"
-  
+  sinatra_process = Process.pid
   Thread.new do 
     Trollop::die "need at least one location" if !$opts[:location]
     Trollop::die "need at least one browser" if !$opts[:browser]
@@ -661,23 +675,32 @@ if $opts[:wptserver]
     require 'uri'
     require 'json'
     
+    p "Lauching wptserver option"
     while true do 
-      #p 'Fetching Job @ '+$opts[:wptserver]+'/work/getwork.php?location='+$opts[:location]+'&f=json'
-      #job = JSON.parse(Net::HTTP.get_response(URI.parse(''+$opts[:wptserver]+'/work/getwork.php?location='+$opts[:location]+'&f=json')).body) 
-      #p "job : "+job.to_s
+      p 'Fetching Job @ '+$opts[:wptserver]+'/work/getwork.php?location='+$opts[:location]+'&f=json'
+      response = Net::HTTP.get_response($opts[:wptserver], '/work/getwork.php?location='+$opts[:location]+'&f=json').body
+      if (response.empty?)
+        for i in 0..4
+          print " - "
+          sleep 1
+        end
+        puts ' - '
+        next
+      end
+      jobJson = JSON.parse(response)
       job = {
-        "Test ID"=>"130520_F2_3",
-        "url"=>"http://google.com",
-        "Capture Video"=>1,
-        "runs"=>1,
+        "Test ID"=> jobJson['Test ID'],
+        "url"=>jobJson['url'],
+        "Capture Video"=>jobJson['Capture Video'],
+        "runs"=> jobJson['runs'],
         "bwIn"=>0,
         "bwOut"=>0,
         "latency"=>0,
         "plr"=>0,
         "pngScreenShot"=>1,
         "imageQuality"=>75,
-        "orientation"=>"default"}
-      if !job.nil? 
+        "orientation"=> jobJson['orientation']}
+      if !job.nil?
         pp job
         test = Wptrb.new(job["url"],{:id => job["Test ID"]})
         if defined?($opts[:browser]) ; test.browser_type     = $opts[:browser] ; end
@@ -689,29 +712,27 @@ if $opts[:wptserver]
         pp "Har_type : #{test.har_type}"
         pp "Cycles : #{test.test_cycles}"
         pp "Test ID : #{test.name}"
-        #test.simulate_display
+        pp "Webdriver Type : #{test.webdriver_type}"
+        test.simulate_display
         #if test.har_type == "proxy"
         #  test.proxy("lib/browsermob-proxy/2.0-beta-6/bin/browsermob-proxy")
         #end
-        pp "coin"
         test.test_url("#{test.browser_type}","#{test.webdriver_type}")
+        postRes = Results.new(test.name, test.har_name['0'])
+        pp "c'est parti"
+        postRes.process
+        pp "process fini"
+        postRes.send($opts[:location], $opts[:wptserver])
       end
       sleep 5
-    end
+     end
+    Process.kill 'TERM' , sinatra_process
   end
   WptrbWww.run!  
 end
 
 #Trollop::HelpNeeded if ARGV.empty?
 #Trollop::die "need at least one url : -u <url>" if ARGV.empty? 
-
-
-
-
-
-
-
-
 
 
 
