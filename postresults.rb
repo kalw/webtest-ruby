@@ -6,6 +6,7 @@ require 'logger'
 require 'zip'
 require 'net/http'
 require 'uri'
+require 'net/http/post/multipart'
 
 require_relative 'OptimizationChecks'
 require_relative 'optimizationClasses'
@@ -61,9 +62,17 @@ class Results
     pp "#{ip}/work/workdone.php"
     pp URI("#{ip}/work/workdone.php")
     pp zipfile_name
-    resp = Net::HTTP.post_form URI(("#{ip}/work/workdone.php"),
-                          { "har" => "false", "flattenZippedHar" => "0",
-                            "id" => "#{id}", "done" => "1", "location" => "#{location}"})
+
+    url = URI.parse("#{ip}/work/workdone.php")
+    req = Net::HTTP::Post::Multipart.new url.path,
+      "file" => UploadIO.new(File.new(zipfile_name), "application/zip", "results.zip"),
+      "har" => "false",
+      "flattenZippedHar" => "0",
+      "id" => "#{id}", "done" => "1",
+      "location" => "#{location}"
+      response = Net::HTTP.start(url.host, url.port) do |http|
+        http.request(req)
+      end
     pp resp
   end
 
@@ -129,16 +138,12 @@ class Results
     #use global $urlUnderTest ?
     #
 
-    pp "curPageDataUrl:"
-    pp curPageData['url']
-
     urlMatch = /^https?:\/\/([^\/?]+)(((?:\/|\\?).*$)|$)/.match(curPageData['url'])
     if (!urlMatch.nil?)
       curPageData['host'] = urlMatch[1]
     else
       #errorLogHar()
       logError.error "Host is not in right format"
-      pp "error host"
     end
 
     pageMatch = /page_(\d+)_([01])/.match(pageref)
