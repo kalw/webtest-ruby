@@ -6,19 +6,36 @@ require 'logger'
 require 'zip'
 require 'net/http'
 require 'uri'
-require 'net/http/post/multipart'
+#require 'net/http/post/multipart'
+require 'rest_client'
+require 'RMagick'
+include Magick
 
 require_relative 'OptimizationChecks'
 require_relative 'optimizationClasses'
 
 class Results
 
-  attr_accessor :path, :pathHar, :id
+  attr_accessor :path, :pathHar, :id, :timingsRec, :curFrame, :pageRec
 
-  def initialize(nameIn, nameHar)
+  def initialize(nameIn, nameHar, timingsRec, pageRec)
     @id = nameIn
     @path = "./public/results/#{nameIn}"
     @pathHar = nameHar
+    @timingsRec = timingsRec
+    @pageRec = pageRec
+  end
+
+  def get_frame_path(path, pos_movie, frameName)
+    if !FileTest::directory?("#{path}/video_1")
+      Dir::mkdir("#{path}/video_1")
+    end
+      if (pos_movie < 10)
+        frameName.replace("frame_000#{pos_movie}.jpg")
+      else
+        frameName.replace("frame_00#{pos_movie}.jpg")
+      end
+      return "#{path}/video_1/#{frameName}"
   end
 
   def get_video(zipfile, id)
@@ -26,6 +43,7 @@ class Results
     movie = FFMPEG::Movie.new("#{path}/#{id}0.webm")
     pp "ok movie loaded"
     duration = movie.duration
+    pp "duration: #{duration}"
     if (duration > 3.5)
       step = 0.5
     else
@@ -33,20 +51,27 @@ class Results
     end
     pos = 0
     pos_movie = 0
-    while (pos < duration) do
-      if (pos_movie < 10)
-        frameName = "frame_000#{pos_movie}.jpg"
-      else
-        frameName = "frame_00#{pos_movie}.jpg"
-      end
-      framePath = "#{path}/video_1/#{frameName}"
-      pp framePath
+    while ((pos + 0.05) < duration) do
+      frameName = ""
+      framePath = get_frame_path(path, pos_movie, frameName)
       movie.screenshot(framePath, seek_time: pos)
-      zipfile.add(frameName, framePath)
+      zipfile.add("video_1/#{frameName}", framePath)
+     #  if (pos_movie > 0)
+     #    listImg = Imagelist.new(@curFrame, framePath)
+     #    if (list[0].distortion_channel(list[1], Magick::RootMeanSquaredErrorMetric) != 0)
+     #      @curFrame = framePath
+     #    else
+     #      delete(framePath)
+     #    end
+     #  else
+     #    @curFrame = framePath
+     #  end
       pos += step
       pos_movie += 1
     end
-
+      framePath = get_frame_path(path, pos_movie, frameName)
+      movie.screenshot(framePath, seek_time: duration - 0.1)
+      zipfile.add("video_1/#{frameName}", framePath)
   end
 
   def send(location, ip)
@@ -55,25 +80,26 @@ class Results
       zipfile.add('1_IEWTR.txt', "#{path}/1_IEWTR.txt")
       zipfile.add('1_IEWPG.txt', "#{path}/1_IEWPG.txt")
       zipfile.add('1_report.txt', "#{path}/1_report.txt")
-      #get_video(zipfile, @id)
-      zipfile.get_output_stream("myFile") { |os| os.write "myFile contains just this" }
+      zipfile.add('1_screen.png', "#{path}/#{@id}0_screen.png")
+      zipfile.add('video.webm', "#{path}/#{id}0.webm")
+      get_video(zipfile, @id)
+      zipfile.get_output_stream("myFile") { |os| os.write "myFile contains just this"}
     end
-    pp "On va POST"
+    pp "POSTing"
     pp "#{ip}/work/workdone.php"
     pp URI("#{ip}/work/workdone.php")
     pp zipfile_name
 
     url = URI.parse("#{ip}/work/workdone.php")
-    req = Net::HTTP::Post::Multipart.new url.path,
-      "file" => UploadIO.new(File.new(zipfile_name), "application/zip", "results.zip"),
+    RestClient.post("#{ip}/work/workdone.php",
+                "file" => File.new(zipfile_name),
       "har" => "false",
       "flattenZippedHar" => "0",
-      "id" => "#{id}", "done" => "1",
+      "id" => "#{id}",
+      "done" => "1",
       "location" => "#{location}"
-      response = Net::HTTP.start(url.host, url.port) do |http|
-        http.request(req)
-      end
-    pp resp
+                 )
+    pp "O K A Y"
   end
 
   #We check if the HAR is present. If so, we load it.
@@ -83,9 +109,16 @@ class Results
     logError = Logger.new('logerror.txt')
     logError.level = Logger::ERROR
 
-    file = File.read(@pathHar)
+    file = File.read(@pathHar, :external_encoding => 'iso-8859-1')
+    pp "JSON parsing of har"
+    begin
     har_file = JSON.parse(file)
+    rescue => error
+      pp error
+    end
+    pp "Let's optimize"
     checks = OptimizationChecks.new
+    pp "Optimization done"
 
     # We sort entries by start time
     sortedEntries = Hash.new
@@ -96,6 +129,7 @@ class Results
 
     sortedEntries.sort
 
+    pp "Calculations begin"
     numPageRecords =
       if har_file['log'].has_key?('pages')
         c = 0
@@ -124,6 +158,11 @@ class Results
       startFullTimePart = ""
       getDateAndTime(startFull, startFullDatePart, startFullTimePart)
 
+      lastBench = Hash.new
+      timingsRec.each do |this|
+        lastBench = this
+      end
+
       #TODO see if there is a onRender argument in POST request.
       #If so, replace UNKNOWN_TIME with this onRender
       curPageData["onRender"] = getHashWithDefault('onRender', page['pageTimings'],
@@ -135,8 +174,12 @@ class Results
         curPageData['docComplete'] = curPageData['fullyLoaded']
     end
 
-    #use global $urlUnderTest ?
-    #
+    curPageData['docComplete'] = @pageRec['loadEventEnd'] - @pageRec['navigationStart']
+    curPageData['fullyLoaded'] = lastBench['responseEnd']
+
+    if (curPageData['fullyLoaded'] < curPageData['docComplete'])
+      curPageData['fullyLoaded'] = curPageData['docComplete']
+    end
 
     urlMatch = /^https?:\/\/([^\/?]+)(((?:\/|\\?).*$)|$)/.match(curPageData['url'])
     if (!urlMatch.nil?)
@@ -144,6 +187,7 @@ class Results
     else
       #errorLogHar()
       logError.error "Host is not in right format"
+      pp "error host"
     end
 
     pageMatch = /page_(\d+)_([01])/.match(pageref)
@@ -176,7 +220,11 @@ class Results
     curPageData['runFileName'] = curPageData['runFilePrefix'] + "IEWTR.txt"
     curPageData['reportFileName'] = curPageData['runFilePrefix']+ "report.txt"
 
-    curPageData["TTFB"] = curPageData["docComplete"]
+    #curPageData["TTFB"] = curPageData["docComplete"]
+    curPageData["TTFB"] = @pageRec['responseStart'] - @pageRec['navigationStart']
+    pp "T T F B"
+    pp curPageData["TTFB"]
+    #TODO
 
     curPageData["bytesOut"] = 0
     curPageData["bytesIn"] = 0
@@ -214,11 +262,19 @@ class Results
     sortedEntries.each { |key, entry|
       pageref = entry['pageref']
       startedDateTime = entry['startedDateTime']
-      entryTime = entry['time']
       reqEnt = entry['request']
       respEnt = entry['response']
       cacheEnt = entry['cache']
       timingsEnt = entry['timings']
+
+      benchTimes = timingsRec.select {|timing| timing['name'] == "#{reqEnt['url']}"}
+      if benchTimes.empty?
+        next
+      end
+
+      benchRec = benchTimes[0]
+
+      entryTime = benchRec['redirectStart']
 
       if (reqEnt['method'] == 'HEAD')
         next
@@ -269,14 +325,33 @@ class Results
         curPageData['startFull'] = startedDateTime
       end
 
-      reqStartTime = getDeltaMillisecondsFromDates(curPageData['startFull'], startedDateTime)
-      if (reqStartTime < 0.0)
-        logError.error "Negative start offset (#{reqStartTime}) for request\n
-                        curPageData['startFull'] = #{reqStartTime}\n
-                        startedDateTime = #{startedDateTime}"
-      end
+      requestTimings = Hash.new
 
-      requestTimings = convertHarTimes(timingsEnt, reqStartTime)
+      reqStartTime = benchRec['startTime'].round
+      requestTimings['start'] = benchRec['startTime'].round
+      if (benchRec['responseEnd'] != 0)
+      requestTimings['load'] = benchRec['responseEnd'].round - benchRec['startTime'].round
+      else
+      requestTimings['load'] = 0
+      end
+      if (benchRec['responseStart'] != 0)
+      requestTimings['ttfb'] = benchRec['responseStart'].round - benchRec['startTime'].round
+      else
+      requestTimings['ttfb'] = 0
+      end
+      requestTimings['dns_ms'] = benchRec['domainLookupEnd'].round - benchRec['domainLookupStart'].round
+      requestTimings['connect_ms'] = benchRec['connectEnd'].round - benchRec['connectStart'].round
+      requestTimings['receive_start'] = benchRec['responseStart'].round
+
+      if (benchRec['secureConnectionStart'] != 0 && benchRec['secureConnectionStart'] != "undefined")
+        requestTimings['ssl_start'] = benchRec['secureConnectionStart'].round
+        requestTimings['ssl_end'] = benchRec['connectEnd'].round
+      else
+        requestTimings['ssl_start'] = 0
+        requestTimings['ssl_end'] = 0
+      end
+      requestTimings['ssl_ms'] = requestTimings['ssl_end'] - requestTimings['ssl_start']
+      #requestTimings = convertHarTimes(timingsEnt, reqStartTime)
       reqDnsTime = requestTimings['dns_ms']
       reqSslTime = requestTimings['ssl_ms']
       reqConnectTime = requestTimings['connect_ms']
@@ -290,7 +365,7 @@ class Results
       reqContentType = respEnt['content']['mimeType']
       reqContentEncoding = 0 #TODO
       reqTransType = 3 #TODO
-      reqEndTime = reqStartTime + reqLoadTime
+      reqEndTime = benchRec['responseEnd']
       reqCached = 0 #TODO
       reqEventUrl = curPageData["url"]
       reqSecure = if (/^https/.match(reqEnt['url'])) then 1 else 0 end
@@ -373,12 +448,12 @@ class Results
                 "\t" + # Full Time to Load (ms)
                 "1\t" + # Optimization Checked
                 "\t" + # CDN Provider
-                "#{requestTimings['dns_start']}\t" + # DNS Start
-                "#{requestTimings['dns_end']}\t" + # DNS end
-                "#{requestTimings['connect_start']}\t" + # connect start
-                "#{requestTimings['connect_end']}\t" + #connect end
-                "#{requestTimings['ssl_start']}\t" + # ssl negociation start
-                "#{requestTimings['ssl_end']}\t" + # ssl negociation end
+                "#{benchRec['domainLookupStart'].round}\t" + # DNS Start
+                "#{benchRec['domainLookupEnd'].round}\t" + # DNS end
+                "#{benchRec['connectStart'].round}\t" + # connect start
+                "#{benchRec['connectEnd'].round}\t" + #connect end
+                "#{requestTimings['ssl_start'].round}\t" + # ssl negociation start
+                "#{requestTimings['ssl_end'].round}\t" + # ssl negociation end
                 "\t \t \t" + #Initiator
                 "\t" +# Server Count
                 "\t" +# Server RTT
@@ -425,7 +500,7 @@ class Results
       curPageData['bytesOut'] += reqBytesOut
       curPageData['bytesIn'] += reqBytesIn
       curPageData['nDnsLookups'] += (reqDnsTime > 0) ? reqDnsTime : 0
-      curPageData['nConnect'] += (reqConnectTime > 0) ? reqDnsTime : 0
+      curPageData['nConnect'] += (reqConnectTime > 0) ? reqConnectTime : 0
       curPageData['nRequest'] += 1
 
       if (/^200$/.match(reqRespCode.to_s))
@@ -444,7 +519,7 @@ class Results
         curPageData['bytesOutDoc'] += reqBytesOut
         curPageData['bytesInDoc'] += reqBytesIn
         curPageData['nDnsLookupsDoc'] += (reqDnsTime > 0) ? reqDnsTime : 0
-        curPageData['nConnectDoc'] += (reqConnectTime > 0) ? reqDnsTime :0
+        curPageData['nConnectDoc'] += (reqConnectTime > 0) ? reqConnectTime : 0
         if (/^200$/.match(reqRespCode.to_s))
           curPageData['nReqs200Doc'] += 1
         elsif (/^302$/.match(reqRespCode.to_s))
