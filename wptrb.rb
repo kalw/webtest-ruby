@@ -394,6 +394,8 @@ class Wptrb
         if !@headless.nil?
           pp "beginning headless video capture"
           @headless.video.start_capture
+        else
+          @vlc_pid = spawn('' + @vlc_bin + ' -I dummy screen:// --screen-fps=10 --sout "#transcode{scale=1, vcodec=VP80, vb=1500}:standard{access=file,dst='+ @movie_name["#{view_index}"] +'}"')
         end
           @browser.goto "#{url}"
           #@timingsRec = @browser.execute_script("return performance.getEntriesByType(\"resource\");")
@@ -418,6 +420,9 @@ class Wptrb
         if !@headless.nil?
           @headless.video.stop_and_save(@movie_name["#{view_index}"])
           pp "headless capture end"
+        else
+          Process.kill("QUIT",@vlc_pid)
+          pp "vlc killed"
         end
         #if !@headless.nil?
         #  @headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
