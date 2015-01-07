@@ -146,6 +146,7 @@ class Results
     end
 
     pageData = Hash.new
+    pp har_file
 
     har_file['log']['pages'].each_with_index do |page, key|
       pageref = page['id']

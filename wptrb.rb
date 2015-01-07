@@ -45,7 +45,7 @@ $opts = Trollop::options do
 
   opt :config, "read or override configuration from file."
   opt :www, "start webview sinatra app."
-  opt :browser, "choose browser type , i.e ; chrome|firefox .", :default => "firefox", :type => String
+  opt :browser, "choose browser type , i.e ; chrome|firefox .", :default => "chrome", :type => String
   opt :webdriver, "choose webdriver type , i.e ; watir|selenium .", :default => "watir", :type => String
   opt :debug, "debug mode. if debug file empty, defaults to debug.log .",
   :type => String , :default => "debug.log"
@@ -92,7 +92,7 @@ class Wptrb
       :browser_type => "firefox" ,
       :har_type => "internal" ,
       :display => "" ,
-      :chrome_settings => %W[ --user-data-dir=/Users/despresr/Library/Application\ Support/Google/Chrome/Default/ --ignore-certificate-errors --always-authorize-plugins --remote-debugging-port=9222 --enable-experimental-extension-apis --no-default-browser-check],
+      :chrome_settings => %W[ --enable-benchmarking --enable-net-benchmarking],
       :vnc_enabled => false ,
       :debug_option => false,
       :test_cycles => 1,
@@ -287,10 +287,31 @@ class Wptrb
         pp "chrome settings set : #{pp chrome_settings}"
         if view_index == 0
           pp "entring chrome testing"
-          #Selenium::WebDriver::Chrome.path = "/Applications/Google\ Chrome\ Canary.app/Contents/MacOS/Google\ Chrome\ Canary"
+
+          driver3 = Selenium::WebDriver.for :chrome, :switches => chrome_settings
+          browser3 = Watir::Browser.new driver3
+          ps_chrome = `ps auxww | grep chrome | grep remote`
+          port_number = ps_chrome.scan(/remote-debugging-port=(\d+)/)[0][0]
+
+          pp "chrome-har-capturer -v true  --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}"
+          `chrome-har-capturer -v true --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}`
+
+          driver2 = Selenium::WebDriver.for :chrome
+          browser2 = Watir::Browser.new(driver2)
+          screen_width = browser2.execute_script("return screen.width;")
+          screen_height = browser2.execute_script("return screen.height;")
+          browser2.driver.manage.window.resize_to(screen_width,screen_height)
+          browser2.driver.manage.window.move_to(0,0)
+          browser2.goto "#{url}"
+          pp "browser gone"
+          @pageRec = browser2.execute_script("return performance.timing;")
+          #browser2.execute_script("performance.setResourceTimingBufferSize(500);")
+          @timingsRec = browser2.execute_script("return performance.getEntriesByType(\"resource\");")
+          
+          pp "perfomance timing acquired"
+
           driver = Selenium::WebDriver.for :chrome
-          @browser = Watir::Browser.new driver , :switches => chrome_settings
-          #@browser = Watir::Browser.new :chrome , :switches => chrome_settings
+          @browser = Watir::Browser.new driver
           screen_width = @browser.execute_script("return screen.width;")
           screen_height = @browser.execute_script("return screen.height;")
           @browser.driver.manage.window.resize_to(screen_width,screen_height)
@@ -305,41 +326,30 @@ class Wptrb
           #performance_timings = browser.execute_script("return window.performance.timing ;")
           #pp performance_timings.inspect
         else
-            #%x(chrome-har-capturer --host 127.0.0.1 --port 9222 --output #{har_name["#{view_index}"]} #{url})
-            sleep 20 # some sites need more time to render even after onreadystate
+          sleep 5 # wait for plugins to load ooooooooo
+
+          @browser.send_keys :f12
+
+          if !@headless.nil?
+            pp "beginning headless video capture"
+            @headless.video.start_capture
+          else
+            @vlc_pid = spawn('' + @vlc_bin + ' -I dummy screen:// --screen-fps=10 --sout "#transcode{scale=1, vcodec=VP80, vb=1500}:standard{access=file,dst='+ @movie_name["#{view_index}"] +'}"')
+          end
+          
           @browser.goto "#{url}"
-#         EM.run do
-#            # Chrome runs an HTTP handler listing available tabs
-#            conn = EM::HttpRequest.new('http://localhost:9222/json').get
-#            conn.callback do
-#              resp = JSON.parse(conn.response)
-#              puts "#{resp.size} available tabs, Chrome response: \n#{resp}"
-#
-#              # connect to first tab via the WS debug URL
-#              ws = Faye::WebSocket::Client.new(resp.first['webSocketDebuggerUrl'])
-#              ws.onopen = lambda do |event|
-#                # once connected, enable network tracking
-#                ws.send JSON.dump({id: 1, method: 'Network.enable'})
-#
-#                # tell Chrome to navigate to twitter.com and look for "chrome" tweets
-#                ws.send JSON.dump({
-#                  id: 1,
-#                  method: 'Page.navigate',
-#                  params: {url: "#{url}"}
-#                })
-#              end
-#
-#              ws.onmessage = lambda do |event|
-#                # print event notifications from Chrome to the console
-#                pp [:new_message, JSON.parse(event.data)]
-#              end
-#            end
-#          end
+
+          if !@headless.nil?
+            @headless.video.stop_and_save(@movie_name["#{view_index}"])
+            pp "headless capture end"
+          else
+            Process.kill("QUIT",@vlc_pid)
+            pp "vlc killed"
+          end
+          pp "before browser screenshot"
+          @browser.screenshot.save("#{png_wdr_name["#{view_index}"]}")
+          pp "test_url end"
         end
-        if !@headless.nil?
-      	  @headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
-        end
-        @browser.screenshot.save("#{png_wdr_name["#{view_index}"]}")
       end
 
       # browser_type == "firefox" && webdriver_type == "watir"
@@ -348,7 +358,7 @@ class Wptrb
         if har_type == "proxy"
           # 
         else
-          @firefox_settings.add_extension "lib/firefox/addons/firebug-2.0.1.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/firebug-2.0.7b1.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b6.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/page-speed.xpi"
@@ -357,7 +367,7 @@ class Wptrb
         end
         if view_index == 0
 
-          driver2 = Selenium::WebDriver.for :firefox, :profile => firefox_settings
+          driver2 = Selenium::WebDriver.for :firefox, :profile => @firefox_settings
             browser2 = Watir::Browser.new(driver2)
             screen_width = browser2.execute_script("return screen.width;")
             screen_height = browser2.execute_script("return screen.height;")
@@ -369,9 +379,8 @@ class Wptrb
             browser2.execute_script("performance.setResourceTimingBufferSize(500);")
             @timingsRec = browser2.execute_script("return performance.getEntriesByType(\"resource\");")
             browser2.close
-          pp "test?"
 
-          driver = Selenium::WebDriver.for :firefox, :profile => firefox_settings
+          driver = Selenium::WebDriver.for :firefox, :profile => @firefox_settings
           @browser = Watir::Browser.new(driver)
           screen_width = @browser.execute_script("return screen.width;")
           screen_height = @browser.execute_script("return screen.height;")
@@ -398,10 +407,7 @@ class Wptrb
           @vlc_pid = spawn('' + @vlc_bin + ' -I dummy screen:// --screen-fps=10 --sout "#transcode{scale=1, vcodec=VP80, vb=1500}:standard{access=file,dst='+ @movie_name["#{view_index}"] +'}"')
         end
           @browser.goto "#{url}"
-          #@timingsRec = @browser.execute_script("return performance.getEntriesByType(\"resource\");")
-          #@browser.execute_script("$(window).load(function() {});")
-
-
+          
           # creation of har file
           Timeout::timeout(300) {
             while (true) do
@@ -424,14 +430,8 @@ class Wptrb
           Process.kill("QUIT",@vlc_pid)
           pp "vlc killed"
         end
-        #if !@headless.nil?
-        #  @headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
-        #  p "headless screenshot"
-        #end
         pp "before browser screenshot"
         @browser.screenshot.save("#{png_wdr_name["#{view_index}"]}")
-        #Process.kill("QUIT",@vlc_pid)
-        #pp "vlc killed"
         pp "test_url end"
       end
 
@@ -722,7 +722,7 @@ if $opts[:wptserver]
       p 'Fetching Job @ '+$opts[:wptserver]+'/work/getwork.php?location='+$opts[:location]+'&f=json'
       response = Net::HTTP.get_response($opts[:wptserver], '/work/getwork.php?location='+$opts[:location]+'&f=json').body
       if (response.empty?)
-        for i in 0..30
+        for i in 0..5
           print " - "
           sleep 1
         end
