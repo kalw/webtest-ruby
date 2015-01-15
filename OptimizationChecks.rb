@@ -1,4 +1,5 @@
 require 'socket'
+require 'uri'
 
 class OptimizationChecks
   attr_accessor :keep_alive_score, :keep_count, :keep_total, :gzip_score, :gzip_total, :gzip_target,
@@ -21,46 +22,58 @@ class OptimizationChecks
   end
 
   def getReqKeepAliveScore(req, scores, reqUrl)
-
+      pp "HO HO 0"
     headerKeep = false
     host = ""
     req['headers'].each do |entry|
+      pp "HO HO 1"
+        if (entry['name'].casecmp('referer') == 0)
+          referer = URI.parse(entry['value'])
+          host = referer.host
+        end
         if (entry['name'].casecmp('host') == 0)
           host = entry['value']
         end
       end
-    toto = ""
-    toto += "GET #{reqUrl} #{req['httpVersion']}\r\n"
-    toto2 = toto
+    connection_close = ""
+    connection_close += "GET #{reqUrl} #{req['httpVersion']}\r\n"
+    connection_alive = connection_close
+      pp "HO HO 2"
 
     req['headers'].each do |entry|
       if (entry['name'] == 'Connection')
-        toto += "Connection: close\r\n"
-        toto2 += "Connection: keep-alive\r\n"
       else
-        toto += "#{entry['name']}: #{entry['value']}\r\n"
-        toto2 += "#{entry['name']}: #{entry['value']}\r\n"
+        connection_close += "#{entry['name']}: #{entry['value']}\r\n"
+        connection_alive += "#{entry['name']}: #{entry['value']}\r\n"
       end
+        connection_close += "Connection: close\r\n"
+        connection_alive += "Connection: keep-alive\r\n"
     end
+      pp "HO HO 3"
       port = 80
       s = TCPSocket.open(host, port)
-      s.puts toto2
+      s.puts connection_alive
       s.puts "\r\n"
-      s.puts toto
+      s.puts connection_close
       s.puts "\r\n"
       isAlive = 0
       testK = 0
       testC = 0
-      while line = s.gets do
-        if (line.scan(/HTTP\/1.1/).count > 0)
-          isAlive += 1
+      begin
+      Timeout::timeout(10) {
+        while line = s.gets do
+          if (line.scan(/HTTP\/1.1/).count > 0)
+            isAlive += 1
+          end
+          if (line.downcase.scan(/http\/1.1 200/).count > 0)
+            testK += 1
+          end
         end
-        if (line.downcase.scan(/http\/1.1 200/).count > 0)
-          testK += 1
-        end
+      }
+      rescue Timeout::Error
       end
       s.close
-
+      pp "HO HO 5"
     if (isAlive == 2 && testK == 2)
       scores.keep_alive_score = 100
     elsif (isAlive == 2 && testK != 2)
@@ -120,7 +133,7 @@ class OptimizationChecks
          end
        end
     end
-    if (count && @gzip_total)
+    if (count && (@gzip_total != 0))
       @gzip_score = @gzip_target * 100 / @gzip_total
     end
     scores.gzip_score = score

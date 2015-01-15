@@ -45,7 +45,7 @@ $opts = Trollop::options do
 
   opt :config, "read or override configuration from file."
   opt :www, "start webview sinatra app."
-  opt :browser, "choose browser type , i.e ; chrome|firefox .", :default => "chrome", :type => String
+  opt :browser, "choose browser type , i.e ; chrome|firefox .", :default => "firefox", :type => String
   opt :webdriver, "choose webdriver type , i.e ; watir|selenium .", :default => "watir", :type => String
   opt :debug, "debug mode. if debug file empty, defaults to debug.log .",
   :type => String , :default => "debug.log"
@@ -244,10 +244,12 @@ class Wptrb
         
     @test_cycles.to_i.times do |view_index|
       @png_wdr_name={}
+      @jpg_wdr_name={}
       @png_x11_name={}
       @har_name={}
       @movie_name={}
       @png_wdr_name["#{view_index}"] = "#{results_path}#{name}#{view_index}_screen.png"
+      @jpg_wdr_name["#{view_index}"] = "#{results_path}#{name}#{view_index}_screen.jpg"
       @png_x11_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.x11.png"
       @har_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.har"
       @movie_name["#{view_index}"] = "#{results_path}#{name}#{view_index}.webm"
@@ -282,7 +284,6 @@ class Wptrb
       @firefox_settings["extensions.PageSpeed.beacon.minimal.url"] = "http://localhost:4567/beacon/pagespeed/full/#{name}/#{view_index}"
       @firefox_settings['dom.enable_resource_timing'] = true
 
-      # browser_type == "chrome" && webdriver_type == "watir"
       if browser == "chrome" && webdriver == "watir"
         pp "chrome settings set : #{pp chrome_settings}"
         if view_index == 0
@@ -293,8 +294,10 @@ class Wptrb
           ps_chrome = `ps auxww | grep chrome | grep remote`
           port_number = ps_chrome.scan(/remote-debugging-port=(\d+)/)[0][0]
 
+          sleep 5
           pp "chrome-har-capturer -v true  --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}"
-          `chrome-har-capturer -v true --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}`
+          `chrome-har-capturer --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}`
+          sleep 5
 
           driver2 = Selenium::WebDriver.for :chrome
           browser2 = Watir::Browser.new(driver2)
@@ -303,7 +306,7 @@ class Wptrb
           browser2.driver.manage.window.resize_to(screen_width,screen_height)
           browser2.driver.manage.window.move_to(0,0)
           browser2.goto "#{url}"
-          pp "browser gone"
+          pp "getting performance timing"
           @pageRec = browser2.execute_script("return performance.timing;")
           #browser2.execute_script("performance.setResourceTimingBufferSize(500);")
           @timingsRec = browser2.execute_script("return performance.getEntriesByType(\"resource\");")
@@ -347,7 +350,7 @@ class Wptrb
             pp "vlc killed"
           end
           pp "before browser screenshot"
-          @browser.screenshot.save("#{png_wdr_name["#{view_index}"]}")
+          #@browser.driver.save_screenshot("#{jpg_wdr_name["#{view_index}"]}")
           pp "test_url end"
         end
       end
@@ -367,7 +370,7 @@ class Wptrb
         end
         if view_index == 0
 
-          driver2 = Selenium::WebDriver.for :firefox, :profile => @firefox_settings
+            driver2 = Selenium::WebDriver.for :firefox, :profile => @firefox_settings
             browser2 = Watir::Browser.new(driver2)
             screen_width = browser2.execute_script("return screen.width;")
             screen_height = browser2.execute_script("return screen.height;")
@@ -431,7 +434,7 @@ class Wptrb
           pp "vlc killed"
         end
         pp "before browser screenshot"
-        @browser.screenshot.save("#{png_wdr_name["#{view_index}"]}")
+        @browser.driver.save_screenshot("#{png_wdr_name["#{view_index}"]}")
         pp "test_url end"
       end
 

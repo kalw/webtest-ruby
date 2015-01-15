@@ -44,18 +44,22 @@ class Results
     pp "ok movie loaded"
     duration = movie.duration
     pp "duration: #{duration}"
-    if (duration > 3.5)
+    if (duration > 3.5 && duration < 30)
       step = 0.5
+    elsif (duration > 30)
+      step = 10
     else
       step = 0.1
     end
     pos = 0
     pos_movie = 0
+    film_strip = []
     while ((pos + 0.05) < duration) do
       frameName = ""
       framePath = get_frame_path(path, pos_movie, frameName)
-      movie.screenshot(framePath, seek_time: pos)
-      zipfile.add("video_1/#{frameName}", framePath)
+      movie.screenshot(framePath, seek_time: pos, resolution: '800x600')
+      film_strip.push(frameName)
+      film_strip.push(framePath)
      #  if (pos_movie > 0)
      #    listImg = Imagelist.new(@curFrame, framePath)
      #    if (list[0].distortion_channel(list[1], Magick::RootMeanSquaredErrorMetric) != 0)
@@ -69,20 +73,26 @@ class Results
       pos += step
       pos_movie += 1
     end
+      film_strip.each_slice(2) {|fs|
+        zipfile.add("video_1/#{fs[0]}", fs[1])
+      } 
       framePath = get_frame_path(path, pos_movie, frameName)
-      movie.screenshot(framePath, seek_time: duration - 0.1)
+      movie.screenshot(framePath, seek_time: duration - 0.1, resolution: '1280x953')
       zipfile.add("video_1/#{frameName}", framePath)
+      zipfile.add('1_screen.jpg', framePath)
   end
 
   def send(location, ip)
     zipfile_name = "#{path}/results.zip"
+    Zip.default_compression = Zlib::DEFAULT_COMPRESSION
     Zip::File.open(zipfile_name, Zip::File::CREATE) do |zipfile|
       zipfile.add('1_IEWTR.txt', "#{path}/1_IEWTR.txt")
       zipfile.add('1_IEWPG.txt', "#{path}/1_IEWPG.txt")
       zipfile.add('1_report.txt', "#{path}/1_report.txt")
-      zipfile.add('1_screen.png', "#{path}/#{@id}0_screen.png")
-      zipfile.add('video.webm', "#{path}/#{id}0.webm")
+      #zipfile.add('1_screen.png', "#{path}/#{@id}0_screen.png")
+      #zipfile.add('video.webm', "#{path}/#{id}0.webm")
       get_video(zipfile, @id)
+      #zipfile.add('1_screen.png', "#{path}/#{@id}0_screen.png")
       zipfile.get_output_stream("myFile") { |os| os.write "myFile contains just this"}
     end
     pp "POSTing"
@@ -146,7 +156,6 @@ class Results
     end
 
     pageData = Hash.new
-    pp har_file
 
     har_file['log']['pages'].each_with_index do |page, key|
       pageref = page['id']
@@ -551,6 +560,7 @@ class Results
       else
         fileWPG = File.open(curPageData['resourceFileName'], 'a+')
       end
+      pp "WPG TTB"
 
       fileWPG.write(
             "#{curPageData['startDate']}\t" +
