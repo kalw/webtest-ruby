@@ -1,7 +1,7 @@
 webtest-ruby [![Build Status](https://travis-ci.org/kalw/webtest-ruby.png?branch=master)](undefined)
 ============
 
-Standalone webpagetest agent in ruby. Test urls w/browser, gather informations and export them in headless mode
+Standalone webpagetest like tool and webpagetest agent in ruby. Test urls w/browser, gather informations and export them in headless mode
 
 
 
