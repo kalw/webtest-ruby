@@ -1,4 +1,4 @@
-require 'rubygems' if RUBY_VERSION < '1.9' 
+require 'rubygems' if RUBY_VERSION < '1.9'
 require 'bundler/setup'
 require 'watir-webdriver'
 #require 'watir-webdriver-performance'
@@ -14,7 +14,7 @@ require 'trollop'
 require 'json'
 #require 'webkit_remote'
 require 'sinatra/base'
-require "sinatra/reloader" 
+require "sinatra/reloader"
 require 'sinatra/twitter-bootstrap'
 require 'haml'
 require 'arachni'
@@ -37,7 +37,7 @@ $opts = Trollop::options do
     * In webview, WPTRB launch a sinatra app that can fire up both mode
 
   Usage:
-         wptrb [options] 
+         wptrb [options]
        
   where [options] are:
   EOS
@@ -100,7 +100,7 @@ class Wptrb
       :vlc_bin => `which vlc`
       }.merge(defaults)
       @options = defaults
-      #@logger = Logger.new(STDOUT)
+      @logger = Logger.new(STDOUT)
       pp "Initialize options : #{options.inspect}"
       
     
@@ -108,10 +108,10 @@ class Wptrb
     
     if File.exists?(File.expand_path(File.dirname(__FILE__))+"/settings.yml")
       @config = YAML::load(File.open(File.expand_path(File.dirname(__FILE__))+"/settings.yml"))
-      pp "loaded config : " + @config.inspect
+      @logger.debug "loaded config : " + @config.inspect
       log_file = File.open(@config["debug_file"], 'a+')
       log_file.sync = true 
-      #@logger = Logger.new(log_file)
+      @logger = Logger.new(log_file)
       if (@config["results_path"]) ; @results_path = @config["results_path"]  else @results_path = options[:results_path]  end
       if (@config["webdriver_type"]) ; @webdriver_type = @config["webdriver_type"] else @webdriver_type = options[:webdriver_type] end
       if (@config["browser_type"]) ; @browser_type = @config["browser_type"] else @browser_type = options[:browser_type] end
@@ -137,22 +137,23 @@ class Wptrb
       @vlc_bin = options[:vlc_bin]
     end
     
-    #@logger.info pp @chrome_settings.inspect
+    @logger.info pp @chrome_settings.inspect
     
     if @debug_option 
-      #@logger.level = Logger::DEBUG 
+      @logger.level = Logger::DEBUG
     else
-      #@logger.level = Logger::ERROR
+      @logger.level = Logger::ERROR
     end
+    @logger.level = Logger::DEBUG
     
     unless site_url[/^http:\/\//] || site_url[/^https:\/\//]
       site_url = URI.parse 'http://' + site_url rescue nil
     end
     @url  = site_url
-    options[:id] == "" ? @name = "#{Time.now.hash}" : @name = options[:id] 
+    options[:id] == "" ? @name = "#{Time.now.hash}" : @name = options[:id]
     @name = "#{name}".gsub(/-/,"")
     @results_path = "#{results_path}#{name}/"
-    #@logger.debug "Name : #{name} | Result Path : #{results_path}"
+    @logger.debug "Name : #{name} | Result Path : #{results_path} | URL : #{url}"
     
     @firefox_settings = Selenium::WebDriver::Firefox::Profile.new
     @firefox_settings.assume_untrusted_certificate_issuer=false   
@@ -164,14 +165,14 @@ class Wptrb
       
       @headless.start
       @display = @headless.display
-      #@logger.debug "Xvfb started on : #{display}"		
+      @logger.debug "Xvfb started on : #{display}"
     else
     end
     @chrome_settings += %W[ --display=:#{display} ]
-    #@logger.debug "display set : #{display}"
+    @logger.debug "display set : #{display}"
     if @vnc_enabled
       system("x11vnc -display :#{display}.0 -ncache 10 &")
-      #@logger.debug "x1vnc started"
+      @logger.debug "x1vnc started"
     end
   end
   
@@ -180,7 +181,7 @@ class Wptrb
   end
 
   def proxy(path)
-    if har_type == "proxy" 
+    if har_type == "proxy"
       @browsermob_proxy = BrowserMob::Proxy::Server.new(path)
       @browsermob_proxy.start
       @proxy_server = brawsermob_proxy.create_proxy
@@ -195,14 +196,14 @@ class Wptrb
       #@firefox_settings['devtools.chrome.enabled'] = true
       if RUBY_PLATFORM.downcase.include?("darwin") && browser_type == "chrome"
         @interface_name = %x(networksetup -listnetworkserviceorder | grep -C1 en0 | head -n1  | awk '{print $2}')
-        #@logger.debug "#{interface_name}"
+        @logger.debug "#{interface_name}"
         @proxy_old_settings = %x(networksetup -getwebproxystate #{interface_name})
         proxy_set = `/usr/sbin/networksetup -setwebproxy #{interface_name} #{proxy_server.host} #{proxy_server.port}`
         proxy_activated = `networksetup -setwebproxystate #{interface_name} on`
         proxy_old_status = %W(`networksetup -getwebproxy #{interface_name}`)
-        #@logger.debug "#{proxy_old_status}"
+        @logger.debug "#{proxy_old_status}"
       end
-      #@logger.debug "proxy set : #{proxy_server.host} #{proxy_server.port}"
+      @logger.debug "proxy set : #{proxy_server.host} #{proxy_server.port}"
     end
   end
   
@@ -237,7 +238,9 @@ class Wptrb
     # if requested test directory exists ; nogo
     if !FileTest::directory?("#{results_path}")
       Dir::mkdir("#{results_path}")
+      @logger.debug "directory created"
     else
+      @logger.debug 'directory already exist'
       return
     end
         
@@ -295,7 +298,7 @@ class Wptrb
           @browser.driver.manage.window.move_to(0,0)
         end
         #	headless.start_capture
-        pp "test_url : #{url} && har_type = #{har_type} && har_name = #{har_name["#{view_index}"]}"
+        @logger.debug "test_url : #{url} && har_type = #{har_type} && har_name = #{har_name["#{view_index}"]}"
         if har_type == "proxy"
           @browser.goto "#{url}"
           sleep 20 # some sites need more time to render even after onreadystate
@@ -334,16 +337,16 @@ class Wptrb
 #          end
         end
         if !@headless.nil?
-      	  @headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
+          @headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
         end
         @browser.screenshot.save("#{png_wdr_name["#{view_index}"]}")
       end
 
       # browser_type == "firefox" && webdriver_type == "watir"
       if browser == "firefox" && webdriver == "watir"
-        pp "test_url : #{url} && har_type = #{har_type} && har_name = #{har_name["#{view_index}"]}"
+        @logger.debug "test_url : #{url} && har_type = #{har_type} && har_name = #{har_name["#{view_index}"]}"
         if har_type == "proxy"
-          # 
+          #
         else
           @firefox_settings.add_extension "lib/firefox/addons/firebug-2.0.1.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
@@ -419,7 +422,7 @@ class Wptrb
         end
 
         if !@headless.nil?
-        	@headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
+          @headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
         end
         @browser.save_screenshot("#{png_wdr_name["#{view_index}"]}")
       end
@@ -427,7 +430,7 @@ class Wptrb
       # browser_type == "firefox" && webdriver_type == "selenium"
       if browser == "firefox" && webdriver == "selenium"
         if har_type == "proxy"
-          # 
+          #
         else
           @firefox_settings.add_extension "lib/firefox/addons/firebug-1.11.0b3.xpi"
           #@firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
@@ -463,12 +466,12 @@ class Wptrb
           }
         end
         if !@headless.nil?
-        	@headless.take_screenshot("#{png_x11_name["#{view_index}"]}") 
+          @headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
         end
         @browser.save_screenshot("#{png_wdr_name["#{view_index}"]}")
       end
     
-      if @har_type == "proxy" 
+      if @har_type == "proxy"
         @har = @proxy_server.har
         pp @har.to_json
         @har.save_to "#{har_name["#{view_index}"]}"
@@ -529,26 +532,24 @@ class WptrbWww < Sinatra::Base
     #haml:index,:locals =>{:coincoin => "#{settings.my_config_property}"}
     haml:index,:locals => {
       :cmd_config => $opts,
-      :id => "#{Time.now.hash}"
+      :id => Time.now.hash.to_s.gsub(/-/,"")
     }
   end
     
   get '/test/' do
-    pp "test page params : #{params.inspect}"
-    defined?(params[:id]) ? id = params[:id] : id = "#{Time.now.hash}"
-    pp id
+    defined?(params[:id]) ? id = params[:id] : id = Time.now.hash.to_s.gsub(/-/,"")
     test = Wptrb.new(params[:url],{:id => id })
     if defined?(params[:b]) ; test.browser_type     = params[:b] ; end
     if defined?(params[:w]) ; test.webdriver_type   = params[:w] ; end
     if defined?(params[:h]) ; test.har_type         = params[:h] ; end
     if defined?(params[:s]) ; test.options[:secscan]  = params[:s] ; end
-     
     if params[:c] == "2"
        test.test_cycles = "2"
     else
       test.test_cycles = "1"
     end
-      
+    pp "found id : #{id}"
+    pp "test page params : #{params.inspect}"
     pp "Testing with : #{test.inspect}"
     pp "Browser : #{test.browser_type}"
     pp "Har_type : #{test.har_type}"
@@ -561,7 +562,7 @@ class WptrbWww < Sinatra::Base
       end
       test.test_url("#{test.browser_type}","#{test.webdriver_type}")
     end
-  	haml:display,:locals => {
+    haml:display,:locals => {
       :name => test.name,
       :host => request.env["SERVER_NAME"],
       :port => request.port,
@@ -615,7 +616,7 @@ class WptrbWww < Sinatra::Base
     view = params[:captures][1]
     pp "YSLOW beacon received"
     #pp JSON.parse(request.body.read.to_s)
-    File.open( File.expand_path(File.dirname(__FILE__)) + "/public/results/#{name}/#{name}#{view}.yslow.json", "w") do |f| 
+    File.open( File.expand_path(File.dirname(__FILE__)) + "/public/results/#{name}/#{name}#{view}.yslow.json", "w") do |f|
       f.write JSON.parse(request.body.read.to_s)
     end 
   end
@@ -625,7 +626,7 @@ class WptrbWww < Sinatra::Base
     view = params[:captures][1]
     pp "PAGESPEED beacon received"
     #pp params
-    File.open( File.expand_path(File.dirname(__FILE__)) + "/public/results/#{name}/#{name}#{view}.pagespeed.json", "w") do |f| 
+    File.open( File.expand_path(File.dirname(__FILE__)) + "/public/results/#{name}/#{name}#{view}.pagespeed.json", "w") do |f|
       f.write params[:content]
     end 
   end
@@ -655,14 +656,14 @@ if $opts[:url]
     test.test_url("#{test.browser_type}","#{test.webdriver_type}")
     Process.kill 'TERM' , sinatra_process
   end
-  WptrbWww.run! 
+  WptrbWww.run!
 end
 
 if $opts[:www]
   WptrbWww.run! do |server|
     #p "www"
-    server.config[:AccessLog] = []
-    server.config[:Logger] = WEBrick::Log::new("/dev/null")
+    #server.config[:AccessLog] = []
+    #server.config[:Logger] = WEBrick::Log::new("/dev/null")
   end
 end
 
@@ -728,11 +729,11 @@ if $opts[:wptserver]
      end
     Process.kill 'TERM' , sinatra_process
   end
-  WptrbWww.run!  
+  WptrbWww.run!
 end
 
 #Trollop::HelpNeeded if ARGV.empty?
-#Trollop::die "need at least one url : -u <url>" if ARGV.empty? 
+#Trollop::die "need at least one url : -u <url>" if ARGV.empty?
 
 
 
