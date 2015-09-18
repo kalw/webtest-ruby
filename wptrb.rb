@@ -21,6 +21,8 @@ require 'arachni'
 #require 'arachni/ui/cli/output'
 #require 'fakeredis'
 #require 'resque'
+require 'fileutils'
+
 
 
 require_relative 'postresults'
@@ -168,11 +170,14 @@ class Wptrb
       @logger.debug "Xvfb started on : #{display}"
     else
     end
+    if RUBY_PLATFORM.downcase.include?("darwin")
+      @headless=nil
+    end
     @chrome_settings += %W[ --display=:#{display} ]
     @logger.debug "display set : #{display}"
     if @vnc_enabled
       system("x11vnc -display :#{display}.0 -ncache 10 &")
-      @logger.debug "x1vnc started"
+      @logger.debug "x11vnc started"
     end
   end
   
@@ -279,6 +284,7 @@ class Wptrb
       @firefox_settings["extensions.PageSpeed.autorun.delay"] = 5
       @firefox_settings["extensions.PageSpeed.autorun"] = true 
       @firefox_settings["extensions.PageSpeed.beacon.full_results.autorun"] = true
+      #TODO variabilize host and port
       @firefox_settings["extensions.PageSpeed.beacon.full_results.url"] = "http://localhost:4567/beacon/pagespeed/full/#{name}/#{view_index}"
       @firefox_settings["extensions.PageSpeed.beacon.minimal.enabled"] = false
       @firefox_settings["extensions.PageSpeed.beacon.minimal.url"] = "http://localhost:4567/beacon/pagespeed/full/#{name}/#{view_index}"
@@ -356,7 +362,7 @@ class Wptrb
           @firefox_settings.add_extension "lib/firefox/addons/remember_certificate_exception-1.0.0-fx.xpi"
         end
         if view_index == 0
-          driver = Selenium::WebDriver.for :firefox, :profile => firefox_settings
+          driver = Selenium::WebDriver.for :firefox, :profile => @firefox_settings
           @browser = Watir::Browser.new(driver)
           screen_width = @browser.execute_script("return screen.width;")
           screen_height = @browser.execute_script("return screen.height;")
@@ -391,12 +397,16 @@ class Wptrb
           pp "har created and saved"
           }
         end
-        #if !@headless.nil?
-        #  @headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
-        #  p "headless screenshot"
-        #end
         p "before browser screenshot"
         @browser.screenshot.save("#{png_wdr_name["#{view_index}"]}")
+        p "after browser screenshot"
+        if !@headless.nil?
+          @headless.take_screenshot("#{png_x11_name["#{view_index}"]}")
+          p "headless screenshot"
+        else
+          #%x("cp #{png_wdr_name["#{view_index}"]} #{png_x11_name["#{view_index}"]}")
+          #p "copy wdr screenshot to x11 cause no X11"
+        end
         Process.kill("QUIT",@vlc_pid)
         pp "test_url end"
       end

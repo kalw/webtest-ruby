@@ -1,8 +1,8 @@
 %p
 - report_yslow = "#{yslow}"
-- png_path = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}*x11.png"
+- png_path = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}*.png"
 - png_nb = Dir.glob("#{png_path}").count
-- if "#{png_nb}" == "#{cycles}"
+- if png_nb.to_i >= cycles.to_i
 	- Dir.glob("#{png_path}").count.times do |view_cycle|
 		- png_path = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}#{view_cycle}*g"
 		- png_path = Dir["#{png_path}"]
@@ -12,7 +12,7 @@
 		- png_path_x11 = png_path[1]
 		
 		- png_name_wd = File.basename(png_path_wd)
-		- png_name_x11 = File.basename(png_path_x11)
+		- if ( "#{png_path_x11}" != "") ; png_name_x11 = File.basename(png_path_x11) end
 		- har_full_path_blob = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}#{view_cycle}.har"
 		- har_full_path = Dir["#{har_full_path_blob}"]
 		- har_full_path = har_full_path[0]
@@ -46,10 +46,10 @@
 										<pre>#{str["message"]} </pre>
 			.span4{:style => "height: 200px !important; overflow: scroll;"}
 				%table.table.table-condensed
-					- pagespeed_xpi = JSON.parse( IO.read(pagespeed_xpi_full_path).gsub('=>',':') )
 					%h3
-						PAGESPEED
 						- if "#{pagespeed_xpi_name}" != "" 
+							PAGESPEED
+							- pagespeed_xpi = JSON.parse( IO.read(pagespeed_xpi_full_path).gsub('=>',':') )
 							%pre
 								Overall score : #{pagespeed_xpi["pageStats"]["overallScore"]} <br>
 								- pagespeed_xpi["rules"].each do |key,str| 
@@ -61,15 +61,17 @@
 					SCREENSHOT
 				%img{:src => "/results/#{name}/#{png_name_wd}"}
 				%img{:src => "/results/#{name}/#{png_name_x11}"}
-		.raw-fluid		
-			.span3
-				%h3
-					VIDEO
-					%video{:width => "320", :height => "210", :controls => true}
-						%source{:src => "/results/#{name}/#{mp4_name}", :type => 'video/webm'}
-			.span9{:height => "210"}
-				%h3
-					HAR
+		- if File.exist?(mp4_full_path_blob)
+			.raw-fluid		
+				.span3
+					%h3
+					
+						VIDEO
+						%video{:width => "320", :height => "210", :controls => true}
+							%source{:src => "/results/#{name}/#{mp4_name}", :type => 'video/webm'}
+		.span9{:height => "210"}
+			%h3
+				HAR
 				:javascript
 					(function() {
 					    var har = document.createElement("script");
@@ -81,10 +83,10 @@
 				.har{:id =>"har#{view_cycle}",:"data-har" => "/results/#{name}/#{har_name}", :validate => "false",:stats => "true",:height => "200"}
 		.raw-fluid
 			.span12
-				- if File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}.afr"
+				- secscan_file = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}.afr" rescue secscan_file = ""
+				- if File.exist?(secscan_file)
 					%h3 Security Check
-					- secscan_file = File.expand_path(File.dirname(__FILE__)) + "/../public/results/#{name}/#{name}.afr" rescue secscan_file = ""
-					- if  Dir.glob(secscan_file).count != 0
+					- if  File.exist?(secscan_file)
 						- auditstore = Arachni::AuditStore.load(secscan_file)
 						- if auditstore.issues.count != 0
 							%table.hidden-phone.table.table-striped.table-hover.table-condensed.fixed{:style => "table-layout: fixed;word-wrap: break-word;"}
@@ -130,7 +132,38 @@
 												%blockquote
 													#{issue.description}
 						- else
-							No issues found.
+							No isssues found 
+					- else
+						%script{:type => "text/javascript", :src => "/js/spin.js"}
+						:javascript
+							setTimeout(function(){
+							   window.location.reload(5);
+							}, 5000);
+						.span12.offset3
+							%p
+							%p
+								%h2 security tests going 
+						.span12{:id => "foo"}
+							:javascript
+								var opts = {
+									lines: 13, // The number of lines to draw
+									length: 7, // The length of each line
+									width: 4, // The line thickness
+									radius: 10, // The radius of the inner circle
+									corners: 1, // Corner roundness (0..1)
+									rotate: 0, // The rotation offset
+									color: '#000', // #rgb or #rrggbb
+									speed: 1, // Rounds per second
+									trail: 60, // Afterglow percentage
+									shadow: false, // Whether to render a shadow
+									hwaccel: false, // Whether to use hardware acceleration
+									className: 'spinner', // The CSS class to assign to the spinner
+									zIndex: 2e9, // The z-index (defaults to 2000000000)
+									top: 'auto', // Top position relative to parent in px
+									left: 'auto' // Left position relative to parent in px
+								};
+								var target = document.getElementById('foo');
+								var spinner = new Spinner(opts).spin(target);
 - else
 	%script{:type => "text/javascript", :src => "/js/spin.js"}
 	:javascript
