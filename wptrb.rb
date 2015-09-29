@@ -617,7 +617,6 @@ class WptrbWww < Sinatra::Base
       :test_proc => test_proc,
       :yslow => params[:yslow],
       :debug => params[:debug],
-      :www_url => test.url,
       :www_proxy => test.har_type,
       :www_webdriver => test.webdriver_type,
       :www_browser => test.browser_type,

@@ -107,10 +107,10 @@ class Results
       "flattenZippedHar" => "0",
       "id" => "#{id}",
       "done" => "1",
-      "location" => "#{location}"
-      response = Net::HTTP.start(url.host, url.port) do |http|
-        http.request(req)
-      end
+      "location" => "#{location}")
+    response = Net::HTTP.start(url.host, url.port) do |http|
+      http.request(req)
+    end
     pp response
   end
 
