@@ -162,10 +162,10 @@ class Wptrb
     @firefox_settings = Selenium::WebDriver::Firefox::Profile.new
     @firefox_settings.assume_untrusted_certificate_issuer=false   
   end
-  
+ 
   def simulate_display()
     if @display == ""
-      @headless = Headless.new
+      @headless = Headless.new(:video => { :provider => 'ffmpeg'})
       
       @headless.start
       @display = @headless.display
@@ -371,13 +371,23 @@ class Wptrb
         @logger.debug "test_url : #{url} && har_type = #{har_type} && har_name = #{har_name["#{view_index}"]}"
         if har_type == "proxy"
           #
-        else
+        else        
+	tmpbrowser = Selenium::WebDriver.for :firefox
+        ffver = tmpbrowser.capabilities.version
+        if ffver.to_f < 42
           @firefox_settings.add_extension "lib/firefox/addons/firebug-2.0.7b1.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b6.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/page-speed.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/yslow-3.1.8-fx.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/remember_certificate_exception-1.0.0-fx.xpi"
+
+        else
+        #native exporter - should work starting 41
+          @firefox_settings["devtools.netmonitor.har.enableAutoExportToFile"] = true
+          @firefox_settings.add_extension "lib/firefox/addons/har_export_trigger-0.5.0.xpi"
+        end
+        tmpbrowser.quit
         end
         if view_index == 0
             driver2 = Selenium::WebDriver.for :firefox, :profile => @firefox_settings
@@ -480,27 +490,42 @@ class Wptrb
         if har_type == "proxy"
           #
         else
-          @firefox_settings.add_extension "lib/firefox/addons/firebug-1.11.0b3.xpi"
-          #@firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
-          #@firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b3.xpi"
+	tmpbrowser = Selenium::WebDriver.for :firefox
+	ffver = tmpbrowser.capabilities.version
+	#ffver = 43
+	if ffver.to_f < 42
+          @firefox_settings.add_extension "lib/firefox/addons/firebug-2.0.7b1.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b6.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/page-speed.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/yslow-3.1.8-fx.xpi"
+          @firefox_settings.add_extension "lib/firefox/addons/remember_certificate_exception-1.0.0-fx.xpi"
+
+	else
+	#native exporter - should work starting 41
+	  @firefox_settings["devtools.netmonitor.har.enableAutoExportToFile"] = true
+          @firefox_settings.add_extension "lib/firefox/addons/har_export_trigger-0.5.0.xpi"
+	end
+	tmpbrowser.quit
         end
+
         if view_index == 0
           @browser = Selenium::WebDriver.for :firefox , :profile => firefox_settings
           screen_width = @browser.execute_script("return screen.width;")
           screen_height = @browser.execute_script("return screen.height;")
-          @browser.driver.manage.window.resize_to(screen_width,screen_height)
-          @browser.driver.manage.window.move_to(0,0)
+          #@browser.driver.manage.window.resize_to(screen_width,screen_height)
+          #@browser.driver.manage.window.move_to(0,0)
         end
         #	headless.start_capture
         if har_type == "proxy"
-          @browser.get "#{url}"
+          @browser.navigate.get "#{url}"
           sleep 20 # some sites need more time to render even after onreadystate
           # need to calculate onload and on onContentLoad for har injection later
           #performance_timings = browser.execute_script("return window.performance.timing ;")
           #pp performance_timings.inspect
         else
           sleep 5 # wait for plugins to load correctly
-          @browser.goto "#{url}"
+          @browser.navigate.to "#{url}"
           # sleep 20 # wait for netexport har creation
           Timeout::timeout(300) {
             while (true) do
