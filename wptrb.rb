@@ -92,7 +92,7 @@ class Wptrb
       :browser_type => "firefox" ,
       :har_type => "internal" ,
       :display => "" ,
-      :chrome_settings => %W[ --enable-benchmarking --enable-net-benchmarking],
+      :chrome_settings => %W[ --enable-benchmarking --enable-net-benchmarking --no-sandbox --user-data-dir],
       :vnc_enabled => false ,
       :debug_option => false,
       :test_cycles => 1,
@@ -305,7 +305,7 @@ class Wptrb
           pp "chrome-har-capturer --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}"
           `chrome-har-capturer --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}`
           sleep 5
-
+	  driver3.quit();
           driver2 = Selenium::WebDriver.for :chrome
           browser2 = Watir::Browser.new(driver2)
           screen_width = browser2.execute_script("return screen.width;")
@@ -319,6 +319,7 @@ class Wptrb
           @timingsRec = browser2.execute_script("return performance.getEntriesByType(\"resource\");")
           
           pp "perfomance timing acquired"
+	  driver2.quit();
 
           driver = Selenium::WebDriver.for :chrome
           @browser = Watir::Browser.new driver
@@ -327,7 +328,6 @@ class Wptrb
           @browser.driver.manage.window.resize_to(screen_width,screen_height)
           @browser.driver.manage.window.move_to(0,0)
         end
-        	headless.start_capture
         @logger.debug "test_url : #{url} && har_type = #{har_type} && har_name = #{har_name["#{view_index}"]}"
         if har_type == "proxy"
           @browser.goto "#{url}"
@@ -357,7 +357,7 @@ class Wptrb
             pp "vlc killed"
           end
           pp "before browser screenshot"
-          @browser.driver.save_screenshot("#{jpg_wdr_name["#{view_index}"]}")
+          #@browser.driver.save_screenshot("#{jpg_wdr_name["#{view_index}"]}")
           pp "test_url end"
         end
       end
