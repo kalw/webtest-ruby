@@ -90,9 +90,9 @@ class Results
       zipfile.add('1_IEWTR.txt', "#{path}/1_IEWTR.txt")
       zipfile.add('1_IEWPG.txt', "#{path}/1_IEWPG.txt")
       zipfile.add('1_report.txt', "#{path}/1_report.txt")
-#      zipfile.add('1_screen.png', "#{path}/#{@id}0_screen.png")
-      #zipfile.add('video.webm', "#{path}/#{id}0.webm")
-      #get_video(zipfile, @id)
+#     zipfile.add('1_screen.png', "#{path}/#{@id}0_screen.png")
+      zipfile.add('video.webm', "#{path}/#{id}0.webm")
+      get_video(zipfile, @id)
       zipfile.get_output_stream("myFile") { |os| os.write "myFile contains just this"}
     pp "zipfile created"
     end
