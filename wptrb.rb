@@ -1,9 +1,8 @@
 require 'rubygems' if RUBY_VERSION < '1.9'
-require 'bundler/setup'
 require 'watir-webdriver'
-#require 'watir-webdriver-performance'
-require 'headless'
+require 'bundler/setup'
 require 'selenium/webdriver'
+require 'headless'
 #require 'browsermob/proxy'
 require 'har'
 require 'yaml'
@@ -22,8 +21,6 @@ require 'arachni'
 #require 'fakeredis'
 #require 'resque'
 require 'fileutils'
-
-
 require 'streamio-ffmpeg'
 
 
@@ -305,7 +302,7 @@ class Wptrb
           port_number = ps_chrome.scan(/remote-debugging-port=(\d+)/)[0][0]
 
           sleep 5
-          pp "chrome-har-capturer -v true  --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}"
+          pp "chrome-har-capturer --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}"
           `chrome-har-capturer --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}`
           sleep 5
 
@@ -330,7 +327,7 @@ class Wptrb
           @browser.driver.manage.window.resize_to(screen_width,screen_height)
           @browser.driver.manage.window.move_to(0,0)
         end
-        #	headless.start_capture
+        	headless.start_capture
         @logger.debug "test_url : #{url} && har_type = #{har_type} && har_name = #{har_name["#{view_index}"]}"
         if har_type == "proxy"
           @browser.goto "#{url}"
@@ -360,7 +357,7 @@ class Wptrb
             pp "vlc killed"
           end
           pp "before browser screenshot"
-          #@browser.driver.save_screenshot("#{jpg_wdr_name["#{view_index}"]}")
+          @browser.driver.save_screenshot("#{jpg_wdr_name["#{view_index}"]}")
           pp "test_url end"
         end
       end
@@ -462,13 +459,14 @@ class Wptrb
       # browser_type == "chrome" && webdriver_type == "selenium"
       if browser == "chrome" && webdriver == "selenium"
         if view_index == 0
-          @browser = Selenium::WebDriver.for :chrome ,  :switches => chrome_settings
-          screen_width = @browser.execute_script("return screen.width;")
-          screen_height = @browser.execute_script("return screen.height;")
-          @browser.driver.manage.window.resize_to(screen_width,screen_height)
-          @browser.driver.manage.window.move_to(0,0)
+          #@browser = Selenium::WebDriver.for :chrome ,  :switches => chrome_settings
+	@browser = Selenium::WebDriver.for :chrome, :switches => %w[--enable-benchmarking --enable-net-benchmarking] 
+#          screen_width = @browser.execute_script("return screen.width;")
+#          screen_height = @browser.execute_script("return screen.height;")
+#          @browser.manage.window.resize_to(screen_width,screen_height)
+#          @browser.manage.window.move_to(0,0)
         end
-        #	headless.start_capture
+       #	headless.start_capture
         if har_type == "proxy"
           @browser.get "#{url}"
           sleep 20 # some sites need more time to render even after onreadystate
@@ -476,7 +474,12 @@ class Wptrb
           #performance_timings = browser.execute_script("return window.performance.timing ;")
           #pp performance_timings.inspect
         else
-          chrome_get_har("#{url}")
+	ps_chrome = `ps auxww | grep chrome | grep remote`
+	port_number = ps_chrome.scan(/remote-debugging-port=(\d+)/)[0][0]
+          sleep 5
+          pp "chrome-har-capturer -v true  --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}"
+          `chrome-har-capturer --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}`
+          sleep 5
         end
 
         if !@headless.nil?
@@ -492,7 +495,7 @@ class Wptrb
         else
 	tmpbrowser = Selenium::WebDriver.for :firefox
 	ffver = tmpbrowser.capabilities.version
-	#ffver = 43
+	tmpbrowser.quit
 	if ffver.to_f < 42
           @firefox_settings.add_extension "lib/firefox/addons/firebug-2.0.7b1.xpi"
           @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
@@ -506,15 +509,14 @@ class Wptrb
 	  @firefox_settings["devtools.netmonitor.har.enableAutoExportToFile"] = true
           @firefox_settings.add_extension "lib/firefox/addons/har_export_trigger-0.5.0.xpi"
 	end
-	tmpbrowser.quit
         end
 
         if view_index == 0
           @browser = Selenium::WebDriver.for :firefox , :profile => firefox_settings
           screen_width = @browser.execute_script("return screen.width;")
           screen_height = @browser.execute_script("return screen.height;")
-          #@browser.driver.manage.window.resize_to(screen_width,screen_height)
-          #@browser.driver.manage.window.move_to(0,0)
+          @browser.manage.window.resize_to(screen_width,screen_height)
+          @browser.manage.window.move_to(0,0)
         end
         #	headless.start_capture
         if har_type == "proxy"
@@ -731,6 +733,8 @@ if $opts[:url]
         postRes.process
         pp "process fini"
         postRes.send($opts[:location], $opts[:wptserver])
+        pp "result sent"
+	
     Process.kill 'TERM' , sinatra_process
   end
   WptrbWww.run!
@@ -765,7 +769,9 @@ if $opts[:wptserver]
         puts ' - '
         next
       end
+	pp "received"
       jobJson = JSON.parse(response)
+	pp "received"
       job = {
         "Test ID"=> jobJson['Test ID'],
         "url"=>jobJson['url'],
@@ -802,6 +808,7 @@ if $opts[:wptserver]
         pp "process fini"
         postRes.send($opts[:location], $opts[:wptserver])
       end
+	pp "sleep5"
       sleep 5
      end
     Process.kill 'TERM' , sinatra_process

@@ -83,17 +83,18 @@ class Results
   end
 
   def send(location, ip)
+    pp "sending perf report"
     zipfile_name = "#{path}/results.zip"
     Zip.default_compression = Zlib::DEFAULT_COMPRESSION
     Zip::File.open(zipfile_name, Zip::File::CREATE) do |zipfile|
       zipfile.add('1_IEWTR.txt', "#{path}/1_IEWTR.txt")
       zipfile.add('1_IEWPG.txt', "#{path}/1_IEWPG.txt")
       zipfile.add('1_report.txt', "#{path}/1_report.txt")
-      #zipfile.add('1_screen.png', "#{path}/#{@id}0_screen.png")
+#      zipfile.add('1_screen.png', "#{path}/#{@id}0_screen.png")
       #zipfile.add('video.webm', "#{path}/#{id}0.webm")
-      get_video(zipfile, @id)
-      #zipfile.add('1_screen.png', "#{path}/#{@id}0_screen.png")
+      #get_video(zipfile, @id)
       zipfile.get_output_stream("myFile") { |os| os.write "myFile contains just this"}
+    pp "zipfile created"
     end
     pp "POSTing"
     pp "#{ip}/work/workdone.php"
@@ -270,7 +271,7 @@ class Results
     b = true
 
     firstLoop = true
-
+	pp "firstloop"
     sortedEntries.each { |key, entry|
       pageref = entry['pageref']
       startedDateTime = entry['startedDateTime']
@@ -399,6 +400,7 @@ class Results
       else
         fileWTR = File.open(curPageData['runFileName'], 'a+')
       end
+	pp "runFileName is opened"
       fileWTR.write("#{reqDate}\t" +
                 "#{reqTime}\t" +
                 "\t" +
