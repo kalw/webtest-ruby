@@ -306,7 +306,7 @@ class Wptrb
           `chrome-har-capturer --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}`
           sleep 5
 	  driver3.quit();
-          driver2 = Selenium::WebDriver.for :chrome
+          driver2 = Selenium::WebDriver.for :chrome, :switches => chrome_settings
           browser2 = Watir::Browser.new(driver2)
           screen_width = browser2.execute_script("return screen.width;")
           screen_height = browser2.execute_script("return screen.height;")
@@ -321,7 +321,7 @@ class Wptrb
           pp "perfomance timing acquired"
 	  driver2.quit();
 
-          driver = Selenium::WebDriver.for :chrome
+          driver = Selenium::WebDriver.for :chrome, :switches => chrome_settings
           @browser = Watir::Browser.new driver
           screen_width = @browser.execute_script("return screen.width;")
           screen_height = @browser.execute_script("return screen.height;")
