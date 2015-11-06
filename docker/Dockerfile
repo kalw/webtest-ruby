@@ -25,5 +25,8 @@ RUN \
   cd / && \
   unzip chromedriver_linux64.zip && \
   mv chromedriver /usr/bin/
+COPY run.sh /
+RUN chmod +x /run.sh
 
-CMD ["bash"]
+ENTRYPOINT ["./run.sh"]
+CMD ["--help"]
