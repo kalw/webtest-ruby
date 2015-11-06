@@ -109,10 +109,11 @@ class Results
       "id" => "#{id}",
       "done" => "1",
       "location" => "#{location}")
-    response = Net::HTTP.start(url.host, url.port) do |http|
-      http.request(req)
-    end
-    pp response
+    
+#    response = Net::HTTP.start(url.host, url.port) do |http|
+#      http.request(req)
+#    end
+    pp 'done'
   end
 
   #We check if the HAR is present. If so, we load it.
