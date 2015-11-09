@@ -162,7 +162,7 @@ class Wptrb
  
   def simulate_display()
     if @display == ""
-      @headless = Headless.new(:video => { :provider => 'ffmpeg'})
+      @headless = Headless.new(:video => { :provider => 'ffmpeg', :frame_rate => 12, :codec => 'libx264' })
       
       @headless.start
       @display = @headless.display
