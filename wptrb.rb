@@ -162,7 +162,7 @@ class Wptrb
  
   def simulate_display()
     if @display == ""
-      @headless = Headless.new(:video => { :provider => 'ffmpeg'})
+      @headless = Headless.new(:video => { :provider => 'ffmpeg', :frame_rate => 10, :codec => 'libx264'})
       
       @headless.start
       @display = @headless.display
@@ -248,11 +248,11 @@ class Wptrb
       return
     end
         
+      @har_name={}
     @test_cycles.to_i.times do |view_index|
       @png_wdr_name={}
       @jpg_wdr_name={}
       @png_x11_name={}
-      @har_name={}
       @movie_name={}
       @png_wdr_name["#{view_index}"] = "#{results_path}#{name}#{view_index}_screen.png"
       @jpg_wdr_name["#{view_index}"] = "#{results_path}#{name}#{view_index}_screen.jpg"
@@ -293,7 +293,7 @@ class Wptrb
 
       if browser == "chrome" && webdriver == "watir"
         pp "chrome settings set : #{pp chrome_settings}"
-        if view_index == 0
+        #if view_index == 0
           pp "entring chrome testing"
 
           driver3 = Selenium::WebDriver.for :chrome, :switches => chrome_settings
@@ -301,11 +301,11 @@ class Wptrb
           ps_chrome = `ps auxww | grep chrome | grep remote`
           port_number = ps_chrome.scan(/remote-debugging-port=(\d+)/)[0][0]
 
-          sleep 5
-          pp "chrome-har-capturer --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}"
-          `chrome-har-capturer --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}`
-          sleep 5
+          sleep 1
+          pp "chrome-har-capturer --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url} -v"
+          `chrome-har-capturer --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url} -d 10000 -v`
 	  driver3.quit();
+
           driver2 = Selenium::WebDriver.for :chrome, :switches => chrome_settings
           browser2 = Watir::Browser.new(driver2)
           screen_width = browser2.execute_script("return screen.width;")
@@ -313,21 +313,21 @@ class Wptrb
           browser2.driver.manage.window.resize_to(screen_width,screen_height)
           browser2.driver.manage.window.move_to(0,0)
           browser2.goto "#{url}"
+	  sleep 4
           pp "getting performance timing"
           @pageRec = browser2.execute_script("return performance.timing;")
           #browser2.execute_script("performance.setResourceTimingBufferSize(500);")
           @timingsRec = browser2.execute_script("return performance.getEntriesByType(\"resource\");")
           
-          pp "perfomance timing acquired"
+          pp "perfomance timing acquired "
 	  driver2.quit();
-
+        #end
           driver = Selenium::WebDriver.for :chrome, :switches => chrome_settings
           @browser = Watir::Browser.new driver
           screen_width = @browser.execute_script("return screen.width;")
           screen_height = @browser.execute_script("return screen.height;")
           @browser.driver.manage.window.resize_to(screen_width,screen_height)
           @browser.driver.manage.window.move_to(0,0)
-        end
         @logger.debug "test_url : #{url} && har_type = #{har_type} && har_name = #{har_name["#{view_index}"]}"
         if har_type == "proxy"
           @browser.goto "#{url}"
@@ -337,9 +337,7 @@ class Wptrb
           #pp performance_timings.inspect
         else
           sleep 5 # wait for plugins to load ooooooooo
-
-          @browser.send_keys :f12
-
+          @browser.goto "about:blank"
           if !@headless.nil?
             pp "beginning headless video capture"
             @headless.video.start_capture
@@ -358,6 +356,7 @@ class Wptrb
           end
           pp "before browser screenshot"
           #@browser.driver.save_screenshot("#{jpg_wdr_name["#{view_index}"]}")
+	  driver.quit();
           pp "test_url end"
         end
       end
@@ -366,94 +365,45 @@ class Wptrb
       # TODO variablize firefox version for plugin version matching and add a firefox 41+ har export plugin http://www.softwareishard.com/blog/har-export-trigger/
       if browser == "firefox" && webdriver == "watir"
         @logger.debug "test_url : #{url} && har_type = #{har_type} && har_name = #{har_name["#{view_index}"]}"
-        if har_type == "proxy"
-          #
-        else        
-	tmpbrowser = Selenium::WebDriver.for :firefox
-        ffver = tmpbrowser.capabilities.version
-        if ffver.to_f < 42
-          @firefox_settings.add_extension "lib/firefox/addons/firebug-2.0.7b1.xpi"
-          @firefox_settings.add_extension "lib/firefox/addons/fireStarter-0.1a6.xpi"
-          @firefox_settings.add_extension "lib/firefox/addons/netExport-0.9b6.xpi"
-          @firefox_settings.add_extension "lib/firefox/addons/page-speed.xpi"
-          @firefox_settings.add_extension "lib/firefox/addons/yslow-3.1.8-fx.xpi"
-          @firefox_settings.add_extension "lib/firefox/addons/remember_certificate_exception-1.0.0-fx.xpi"
 
-        else
-        #native exporter - should work starting 41
-          @firefox_settings["devtools.netmonitor.har.enableAutoExportToFile"] = true
-          @firefox_settings.add_extension "lib/firefox/addons/har_export_trigger-0.5.0.xpi"
-        end
-        tmpbrowser.quit
-        end
-        if view_index == 0
-            driver2 = Selenium::WebDriver.for :firefox, :profile => @firefox_settings
-            browser2 = Watir::Browser.new(driver2)
-            screen_width = browser2.execute_script("return screen.width;")
-            screen_height = browser2.execute_script("return screen.height;")
-            browser2.driver.manage.window.resize_to(screen_width,screen_height)
-            browser2.driver.manage.window.move_to(0,0)
-            browser2.goto "#{url}"
-            pp "browser gone"
-            @pageRec = browser2.execute_script("return performance.timing;")
-            browser2.execute_script("performance.setResourceTimingBufferSize(500);")
-            @timingsRec = browser2.execute_script("return performance.getEntriesByType(\"resource\");")
-            browser2.close
+        @firefox_settings.add_extension "lib/firefox/addons/har_export_trigger-0.5.0.xpi"
+        @firefox_settings["devtools.netmonitor.har.enableAutoExportToFile"] = true
+	@firefox_settings["devtools.netmonitor.har.forceExport"] = true
+        @firefox_settings["devtools.netmonitor.har.defaultLogDir"] = "/tmp/"
+        @firefox_settings["devtools.netmonitor.har.defaultFileName"] = "#{name}#{view_index}"
+	@firefox_settings["extensions.netmonitor.har.autoConnect"] = true
+	@firefox_settings["extensions.netmonitor.har.enableAutomation"] = true
+	@firefox_settings["browser.startup.homepage"] = "about:blank"
+	@firefox_settings.native_events = false
 
-          driver = Selenium::WebDriver.for :firefox, :profile => @firefox_settings
-          @browser = Watir::Browser.new(driver)
-          screen_width = @browser.execute_script("return screen.width;")
-          screen_height = @browser.execute_script("return screen.height;")
-          @browser.driver.manage.window.resize_to(screen_width,screen_height)
-          @browser.driver.manage.window.move_to(0,0)
-        end
-        #	headless.start_capture
-        if har_type == "proxy"
-          p cest le proxy
-          @browser.goto "#{url}"
-          sleep 20 # some sites need more time to render even after onreadystate
-          # need to calculate onload and on onContentLoad for har injection later
-          #performance_timings = browser.execute_script("return window.performance.timing ;")
-          #pp performance_timings.inspect
-        else
-          sleep 5 # wait for plugins to load ooooooooo
-          @browser.send_keys :f12
+	browser2 = Selenium::WebDriver.for :firefox, :profile => @firefox_settings
+        screen_width = browser2.execute_script("return screen.width;")
+        screen_height = browser2.execute_script("return screen.height;")
+        browser2.manage.window.resize_to(screen_width,screen_height)
+        browser2.manage.window.move_to(0,0)
+	browser2.manage.timeouts.implicit_wait = 10
 
-          #@vlc_pid = spawn('' + @vlc_bin + ' -I dummy screen:// --screen-fps=10 --sout "#transcode{scale=1, vcodec=VP80, vb=1500}:standard{access=file,dst='+ @movie_name["#{view_index}"] +'}"')
-        if !@headless.nil?
-          pp "beginning headless video capture"
-          @headless.video.start_capture
-        else
-          @vlc_pid = spawn('' + @vlc_bin + ' -I dummy screen:// --screen-fps=10 --sout "#transcode{scale=1, vcodec=VP80, vb=1500}:standard{access=file,dst='+ @movie_name["#{view_index}"] +'}"')
-        end
-          @browser.goto "#{url}"
-          
-          # creation of har file
-          Timeout::timeout(300) {
-            while (true) do
-              if !Dir.glob(Dir["#{File.expand_path(File.dirname(__FILE__))}/public/results/#{name}/*.har"].grep(/\+/)).empty?
-                export_name = Dir.glob(Dir["#{File.expand_path(File.dirname(__FILE__))}/public/results/#{name}/*.har"].grep(/\+/))
-                if File.size(export_name[0]) > 730
-                  File.rename(export_name[0],"#{har_name["#{view_index}"]}")
-                  break
-                end
-              end
-              sleep 0.5
-            end
-          }
-        end
+	@headless.video.start_capture
+        browser2.navigate.to "#{url}"
+	sleep 8
+	pp "browser gone"
+	@headless.video.stop_and_save(@movie_name["#{view_index}"])
+        @pageRec = browser2.execute_script("return performance.timing;")
+        browser2.execute_script("performance.setResourceTimingBufferSize(500);")
+        @timingsRec = browser2.execute_script("return performance.getEntriesByType(\"resource\");")
+        browser2.close
 
-        pp "har created and saved"
-        if !@headless.nil?
-          @headless.video.stop_and_save(@movie_name["#{view_index}"])
-          pp "headless capture end"
-        else
-          Process.kill("QUIT",@vlc_pid)
-          pp "vlc killed"
-        end
-        pp "before browser screenshot"
-        @browser.driver.save_screenshot("#{png_wdr_name["#{view_index}"]}")
-        pp "test_url end"
+	if File.exist?("/tmp/#{name}#{view_index}-1.har")
+	    FileUtils.mv("/tmp/#{name}#{view_index}-1.har", "#{results_path}", :verbose => true, :force => true)
+	    File.rename("#{results_path}#{name}#{view_index}-1.har","#{results_path}#{name}#{view_index}.har")
+	else
+	    if File.exist?("/tmp/#{name}#{view_index}.har")
+	        FileUtils.mv("/tmp/#{name}#{view_index}.har", "#{results_path}", :verbose => true, :force => true)
+	    else
+		pp "no har created"
+	    end
+	end
+        pp "browser closed"
       end
 
       # browser_type == "chrome" && webdriver_type == "selenium"
@@ -478,8 +428,7 @@ class Wptrb
 	port_number = ps_chrome.scan(/remote-debugging-port=(\d+)/)[0][0]
           sleep 5
           pp "chrome-har-capturer -v true  --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}"
-          `chrome-har-capturer --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url}`
-          sleep 5
+          `chrome-har-capturer --host 127.0.0.1 --port #{port_number} --output #{har_name["#{view_index}"]} #{url} -d 5000`
         end
 
         if !@headless.nil?
@@ -554,7 +503,7 @@ class Wptrb
       end
       
     end # end cycle
-    @browser.close
+    #@browser.close
     if !@headless.nil?
       @headless.destroy
     end
@@ -769,14 +718,13 @@ if $opts[:wptserver]
         puts ' - '
         next
       end
-	pp "received"
       jobJson = JSON.parse(response)
-	pp "received"
       job = {
         "Test ID"=> jobJson['Test ID'],
         "url"=>jobJson['url'],
         "Capture Video"=>jobJson['Capture Video'],
         "runs"=> jobJson['runs'],
+	"browser" => jobJson['browser'],
         "bwIn"=>0,
         "bwOut"=>0,
         "latency"=>0,
@@ -786,11 +734,7 @@ if $opts[:wptserver]
         "orientation"=> jobJson['orientation']}
       if !job.nil?
         pp job
-        test = Wptrb.new(job["url"],{:id => job["Test ID"]})
-        if defined?($opts[:browser]) ; test.browser_type     = $opts[:browser] ; end
-        #if defined?(params[:w]) ; test.webdriver_type   = params[:w]  ; end
-        #if defined?(params[:h]) ; test.har_type         = params[:h]  ; end
-        if defined?(job["runs"]) ; test.test_cycles      = job["runs"] ; end
+        test = Wptrb.new(job["url"],{:id => job["Test ID"],:browser_type => job["browser"],:test_cycles => job["runs"]})
         pp "Testing with : #{test.inspect}"
         pp "Browser : #{test.browser_type}"
         pp "Har_type : #{test.har_type}"
@@ -803,7 +747,9 @@ if $opts[:wptserver]
         #end
         test.test_url("#{test.browser_type}","#{test.webdriver_type}")
         postRes = Results.new(test.name, test.har_name['0'], test.timingsRec, test.pageRec)
-        pp "process go"
+        pp "process go #{}"
+        pp "process go #{test.har_name['1']}"
+        pp "process go #{test.har_name['2']}"
         postRes.process
         pp "process fini"
         postRes.send($opts[:location], $opts[:wptserver])
