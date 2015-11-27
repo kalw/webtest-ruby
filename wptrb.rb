@@ -162,12 +162,7 @@ class Wptrb
  
   def simulate_display()
     if @display == ""
-<<<<<<< HEAD
       @headless = Headless.new(:video => { :provider => 'ffmpeg', :frame_rate => 10, :codec => 'libx264'})
-=======
-      @headless = Headless.new(:video => { :provider => 'ffmpeg', :frame_rate => 12, :codec => 'libx264' })
->>>>>>> 9a074ee024ab61a3c75daf4303d1ac16498bffae
-      
       @headless.start
       @display = @headless.display
       @logger.debug "Xvfb started on : #{display}"
