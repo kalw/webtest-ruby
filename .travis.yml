@@ -1,6 +1,6 @@
 language: ruby
 rvm:
-  - "1.9.3"
+  - "2.2"
 before_install: 
   - sudo apt-get update
   - sudo apt-get install -y wget xvfb chromium-browser iceweasel flashplugin-installer openjdk-6-jdk unzip
