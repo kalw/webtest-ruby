@@ -9,4 +9,4 @@ before_install:
   - cat docker/Dockerfile | docker build -t kalw/wptrb -
   
 script:
-  - docker run --rm -ti --entrypoint "bash -c 'source /etc/profile.d/rvm.sh && bundle exec rake'" kalw/wptrb
+  - docker run --rm -ti --entrypoint bash kalw/wptrb 'source /etc/profile.d/rvm.sh && cd && bundle exec rake'
